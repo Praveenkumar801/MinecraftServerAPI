@@ -18,7 +18,7 @@ jobs:
         image: itzg/minecraft-server:latest
         ports:
           - 25565:25565
-          - 7001:7001
+          - 7000:7000
         env:
           EULA: "TRUE"
           VERSION: "${{ matrix.minecraft-version }}"
