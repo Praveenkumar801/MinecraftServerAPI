@@ -3,7 +3,7 @@ openapi: 3.0.0
 info:
   title: Minecraft Server API
   description: This API provides endpoints for interacting with and managing
-    various aspects of a Minecraft server.
+    various aspects of a Minecraft server. You can find a public list of available Endpoints [here](https://msa.shweit.com).
   version: 1.0.3
   contact:
     name: Dennis van den Brock
