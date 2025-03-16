@@ -1,5 +1,5 @@
 # MinecraftServerAPI
-<img src="https://img.shields.io/github/actions/workflow/status/Shweit/MinecraftServerAPI/runtime.yml" /> <img src="https://img.shields.io/github/v/release/Shweit/MinecraftServerAPI" /> <img src="https://img.shields.io/github/license/Shweit/MinecraftServerAPI" />
+<img src="https://img.shields.io/github/actions/workflow/status/Shweit/MinecraftServerAPI/runtime.yml" /> <img src="https://img.shields.io/github/license/Shweit/MinecraftServerAPI" />
 
 ## Overview
 **MinecraftServerAPI** is a powerful and flexible plugin for Minecraft servers, providing RESTful APIs to interact with the server programmatically. This project allows server administrators to automate tasks, gather information, manage the server more efficiently, and even trigger WebHooks for various server events.
@@ -30,11 +30,11 @@ mvn clean install
 ### Setting up the Minecraft Server
 3. Copy the generated JAR file to the `plugins` directory of your Minecraft server.
 ```shell
-cp target/MinecraftServerAPI-1.0.jar /path/to/your/minecraft/server/plugins
+cp target/MinecraftServerAPI-*.jar /path/to/your/minecraft/server/plugins
 ```
 4. Start or restart your Minecraft server.
 ```shell
-java -Xmx1024M -Xms1024M -jar paper-1.21.jar nogui
+java -Xmx1024M -Xms1024M -jar paper-instance.jar nogui
 ```
 5.  Once the server is running, the plugin will be loaded automatically. You can verify it by running:
 ```shell
