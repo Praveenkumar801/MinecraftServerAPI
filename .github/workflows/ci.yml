@@ -55,7 +55,7 @@ jobs:
         run: |
           CONTAINER_ID=$(docker ps -q --filter ancestor=itzg/minecraft-server:latest)
           docker cp target/MinecraftServerAPI-*.jar $CONTAINER_ID:/data/plugins/
-          docker mkdir $CONTAINER_ID/data/plugins/MinecraftServerAPI
+          docker exec $CONTAINER_ID mkdir -p /data/plugins/MinecraftServerAPI
           docker cp docker/test.config.yml $CONTAINER_ID:/data/plugins/MinecraftServerAPI/config.yml
           
       - name: Reload server and verify plugin
