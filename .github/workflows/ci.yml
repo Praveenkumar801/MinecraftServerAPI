@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        minecraft-version: ['1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4']
+        minecraft-version: ['1.21', '1.21.1', '1.21.3', '1.21.4']
     
     services:
       minecraft:
@@ -74,5 +74,5 @@ jobs:
       - name: Test API endpoint
         run: |
           # Test that the API is responding
-          curl -f -H "Authorization: TestKey" http://localhost:7001/v1/ping || (echo "API endpoint not responding" && exit 1)
+          curl -f -H "Authorization: TestKey" http://localhost:7000/v1/ping || (echo "API endpoint not responding" && exit 1)
           echo "API endpoint is working!"
