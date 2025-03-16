@@ -1,6 +1,7 @@
 package com.shweit.serverapi.endpoints.v1;
 
 import com.shweit.serverapi.MinecraftServerAPI;
+import com.shweit.serverapi.handlers.CommandOutputCapture;
 import com.shweit.serverapi.handlers.LogHandler;
 import com.shweit.serverapi.listeners.ChatListener;
 import com.shweit.serverapi.utils.Helper;
@@ -224,9 +225,10 @@ public final class ServerAPI {
         }
 
         AtomicBoolean success = new AtomicBoolean(false);
+        CommandOutputCapture outputCapture = new CommandOutputCapture();
 
         BukkitTask t1 = Bukkit.getScheduler().runTask(MinecraftServerAPI.getInstance(), () -> {
-            success.set(Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command));
+            success.set(Bukkit.getServer().dispatchCommand(outputCapture, command));
         });
 
         while (Bukkit.getScheduler().isCurrentlyRunning(t1.getTaskId()) || Bukkit.getScheduler().isQueued(t1.getTaskId())) {
@@ -240,10 +242,9 @@ public final class ServerAPI {
             }
         }
 
-        // TODO: Catch command output and return it in the response
-
         JSONObject jsonResponse = new JSONObject();
         jsonResponse.put("success", success.get());
+        jsonResponse.put("output", outputCapture.getOutputMessages());
 
         return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", jsonResponse.toString());
     }
