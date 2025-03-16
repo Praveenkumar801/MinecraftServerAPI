@@ -2,9 +2,7 @@ name: Java CI
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   checkstyle:
@@ -55,6 +53,10 @@ jobs:
     name: Plugin Integration Tests
     runs-on: ubuntu-latest
     needs: [unit-tests]
+    strategy:
+      fail-fast: false
+      matrix:
+        minecraft-version: ['1.21', '1.21.1', '1.21.2', '1.21.3', '1.21.4']
     
     services:
       minecraft:
@@ -64,7 +66,7 @@ jobs:
           - 7001:7001
         env:
           EULA: "TRUE"
-          VERSION: "1.21"
+          VERSION: "${{ matrix.minecraft-version }}"
           TYPE: "PAPER"
           ENABLE_RCON: "true"
           RCON_PASSWORD: "testing"
