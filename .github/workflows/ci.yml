@@ -47,3 +47,75 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+          
+      - name: Run Unit Tests
+        run: mvn test
+        
+  integration-tests:
+    name: Plugin Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    
+    services:
+      minecraft:
+        image: itzg/minecraft-server:latest
+        ports:
+          - 25565:25565
+          - 7001:7001
+        env:
+          EULA: "TRUE"
+          VERSION: "1.21"
+          TYPE: "PAPER"
+          ENABLE_RCON: "true"
+          RCON_PASSWORD: "testing"
+          RCON_PORT: 25575
+        options: >-
+          --health-cmd "mc-health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          
+      - name: Build plugin
+        run: mvn clean package -DskipTests
+        
+      - name: Wait for Minecraft server to start
+        run: |
+          echo "Waiting for Minecraft server to be ready..."
+          timeout 300 bash -c 'until docker exec $(docker ps -q --filter ancestor=itzg/minecraft-server:latest) mc-health; do sleep 5; done'
+          echo "Minecraft server is ready!"
+          
+      - name: Copy plugin to server
+        run: |
+          CONTAINER_ID=$(docker ps -q --filter ancestor=itzg/minecraft-server:latest)
+          docker cp target/MinecraftServerAPI-*.jar $CONTAINER_ID:/data/plugins/
+          
+      - name: Reload server and verify plugin
+        run: |
+          CONTAINER_ID=$(docker ps -q --filter ancestor=itzg/minecraft-server:latest)
+          docker exec $CONTAINER_ID rcon-cli reload confirm
+          sleep 30
+          # Check if plugin is loaded by looking for its name in the plugins list
+          PLUGIN_CHECK=$(docker exec $CONTAINER_ID rcon-cli plugins | grep -i MinecraftServerAPI || echo "Plugin not found")
+          if [[ "$PLUGIN_CHECK" == *"Plugin not found"* ]]; then
+            echo "Plugin failed to load properly"
+            docker exec $CONTAINER_ID cat /data/logs/latest.log
+            exit 1
+          else
+            echo "Plugin loaded successfully: $PLUGIN_CHECK"
+          fi
+          
+      - name: Test API endpoint
+        run: |
+          # Test that the API is responding
+          curl -f -H "Authorization: TestKey" http://localhost:7001/v1/ping || (echo "API endpoint not responding" && exit 1)
+          echo "API endpoint is working!"
