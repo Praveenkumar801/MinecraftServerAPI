@@ -1,0 +1,74 @@
+# This is the configuration file for the MinecraftServerAPI-Plugin.
+
+# The port the API should listen on.
+port: 7000
+
+# Enable swagger documentation for the API endpoints
+swagger: true
+
+# If you want to enable Authentication, set this to true.
+# It is not recommended to disable this. If you do, everyone can access the API.
+authentication:
+  enabled: true
+  key: "TestKey"
+
+# If you want to enable the debug mode, set this to true.
+# This will print more information to the console.
+debug: false
+
+# Here you can turn on/off the different Webhooks.
+# If you want to disable a Webhook, set it to false.
+webhooks:
+
+  # You can set a list of URLs which should be called when the Webhook is triggered.
+  # You can set multiple URLs here.
+  urls:
+    - "https://example.com/webhook1"
+    - "https://example.com/webhook2"
+
+  # Here is a list of all available Webhooks.
+  # You can enable or disable them here.
+  # Or via the command /webhooks <disable/enable> <webhook>
+  server_start: true
+  server_stop: true
+  plugin_disable: true
+  plugin_enable: true
+  block_break: false # This is disabled by default, because it can spam your Webhook-URLs.
+  block_place: false # This is disabled by default, because it can spam your Webhook-URLs.
+  block_burn: false # This is disabled by default, because it can spam your Webhook-URLs.
+  block_redstone: false # This is disabled by default, because it can spam your Webhook-URLs.
+  note_play: true
+  sign_change: true
+  enchant_item: true
+  creeper_power: true
+  creature_spawn: false # This is disabled by default, because it can spam your Webhook-URLs.
+  entity_death: false # This is disabled by default, because it can spam your Webhook-URLs.
+  entity_explode: true
+  entity_shoot_bow: true
+  entity_tame: true
+  explosion_prime: true
+  player_death: true
+  brew: true
+  craft_item: false # This is disabled by default, because it can spam your Webhook-URLs.
+  furnace_burn: true # This is disabled by default, because it can spam your Webhook-URLs.
+  furnace_smelt: true # This is disabled by default, because it can spam your Webhook-URLs.
+  player_chat: false # This is disabled by default, because it delays the delivery of the message to the server.
+  player_login: true
+  player_command: false # This is disabled by default, because it delays the delivery of the command to the server.
+  player_gamemode_change: true
+  player_item_break: true
+  player_join: true
+  player_kick: true
+  player_quit: true
+  player_respawn: true
+  lightning_strike: true
+  weather_change: true
+  thunder_change: true
+  world_load: true
+  world_save: true
+  world_unload: true
+
+# Here you can list an extra set of Files or Directories which should be saved by the Backup-System.
+# Following directories and files are already saved by default: ["world", "world_nether", "world_the_end", "plugins", "config", "server.properties", "banned-ips.json", "banned-players.json", "ops.json", "whitelist.json"]
+# e.g.: ["plugins/MyPlugin/config.yml", "plugins/MyPlugin/data/"]
+backup_files: []
