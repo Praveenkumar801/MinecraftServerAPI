@@ -1016,6 +1016,9 @@ paths:
                   success:
                     type: boolean
                     example: true
+                  output:
+                    type: string
+                    example: "Hello, world!"
         "400":
           description: Bad request - missing or invalid parameters
           content:
