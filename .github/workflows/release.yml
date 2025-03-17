@@ -40,8 +40,18 @@ jobs:
             elif [[ $MC_VERSION == "1.18" ]]; then
               echo "game_versions=1.18,1.18.1,1.18.2" >> $GITHUB_OUTPUT
             else
+              # For other versions, use the exact version and ensure it's not empty
               echo "game_versions=$MC_VERSION" >> $GITHUB_OUTPUT
+              # Add a fallback in case the version extraction fails
+              if [[ -z "$MC_VERSION" ]]; then
+                echo "Fallback to a default version"
+                echo "game_versions=1.19,1.20,1.21" >> $GITHUB_OUTPUT
+              fi
             fi
+
+            # Store the game versions for debugging
+            GAME_VERSIONS=$(grep -oP 'game_versions=\K.*' $GITHUB_OUTPUT)
+            echo "Compatible game versions: $GAME_VERSIONS"
           else
             echo "Could not determine Minecraft version from branch name: $BRANCH_NAME"
             exit 1
