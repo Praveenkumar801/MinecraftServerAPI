@@ -111,6 +111,9 @@ public final class RegisterEndpoints {
         server.addRoute(NanoHTTPD.Method.GET, "/v1/server/log", serverAPI::getLog);
         Logger.debug("Registered GET /v1/server/log");
 
+        server.addRoute(NanoHTTPD.Method.POST, "/v1/server/exec-multiple", serverAPI::execMultipleCommands);
+        Logger.debug("Registered POST /v1/server/exec-multiple");
+
         server.addRoute(NanoHTTPD.Method.GET, "/v1/whitelist", whitelistAPI::getWhitelist);
         Logger.debug("Registered GET /v1/whitelist");
 

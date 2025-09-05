@@ -47,6 +47,22 @@ public final class WebServer extends NanoHTTPD {
 
         // Extract query parameters
         extractQueryParams(session, params);
+        
+        // Extract body for POST requests
+        if (method == Method.POST || method == Method.PUT) {
+            try {
+                Map<String, String> files = new HashMap<>();
+                session.parseBody(files);
+                
+                // Get the raw body content
+                String body = files.get("postData");
+                if (body != null && !body.isEmpty()) {
+                    params.put("postData", body);
+                }
+            } catch (Exception e) {
+                Logger.error("Failed to parse request body: " + e.getMessage());
+            }
+        }
 
         // Match routes and return appropriate response
         return handleRouteMatching(uri, method, params);

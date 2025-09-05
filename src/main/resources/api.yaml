@@ -1033,6 +1033,74 @@ paths:
           description: Unauthorized access - invalid or missing authentication key
         "500":
           description: Internal server error
+  /server/exec-multiple:
+    post:
+      summary: Execute multiple commands on the server
+      description: |
+        This endpoint allows executing multiple commands on the Minecraft server in sequence.
+        Each command is executed one after another, and the results for all commands are returned.
+      tags:
+        - Server
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        description: JSON object containing an array of commands to execute
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - commands
+              properties:
+                commands:
+                  type: array
+                  description: Array of commands to execute sequentially
+                  items:
+                    type: string
+                  example:
+                    - "say Hello world"
+                    - "time set day"
+                    - "weather clear"
+      responses:
+        "200":
+          description: Commands executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalCommands:
+                    type: integer
+                    example: 3
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        command:
+                          type: string
+                          example: "say Hello world"
+                        success:
+                          type: boolean
+                          example: true
+                        output:
+                          type: string
+                          example: "[Server] Hello world"
+        "400":
+          description: Bad request - missing or invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Missing 'commands' array in request body.
+        "401":
+          description: Unauthorized access - invalid or missing authentication key
+        "500":
+          description: Internal server error
   /server/reload:
     post:
       summary: Reload the server

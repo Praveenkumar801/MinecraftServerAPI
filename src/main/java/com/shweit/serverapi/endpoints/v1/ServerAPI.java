@@ -1,17 +1,20 @@
 package com.shweit.serverapi.endpoints.v1;
 
 import com.shweit.serverapi.MinecraftServerAPI;
+import com.shweit.serverapi.WebServer;
 import com.shweit.serverapi.handlers.CommandOutputCapture;
 import com.shweit.serverapi.handlers.LogHandler;
 import com.shweit.serverapi.listeners.ChatListener;
 import com.shweit.serverapi.utils.Helper;
 import com.shweit.serverapi.utils.Logger;
+import com.shweit.serverapi.utils.RouteDefinition;
 import fi.iki.elonen.NanoHTTPD;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -313,6 +316,72 @@ public final class ServerAPI {
         JSONObject logJson = new JSONObject();
         logJson.put("log", logHandler.getLog());
         return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", logJson.toString());
+    }
+
+    public NanoHTTPD.Response execMultipleCommands(final Map<String, String> params) {
+        String body = params.get("postData");
+        
+        if (body == null || body.isEmpty()) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, 
+                "application/json", "{\"error\":\"Invalid request body. Expected JSON with 'commands' array.\"}");
+        }
+        
+        try {
+            JSONObject requestBody = new JSONObject(body);
+            
+            if (!requestBody.has("commands")) {
+                return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, 
+                    "application/json", "{\"error\":\"Missing 'commands' array in request body.\"}");
+            }
+            
+            JSONArray commands = requestBody.getJSONArray("commands");
+            
+            if (commands.length() == 0) {
+                return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, 
+                    "application/json", "{\"error\":\"Commands array cannot be empty.\"}");
+            }
+            
+            JSONArray results = new JSONArray();
+            
+            for (int i = 0; i < commands.length(); i++) {
+                String command = commands.getString(i);
+                
+                AtomicBoolean success = new AtomicBoolean(false);
+                CommandOutputCapture outputCapture = new CommandOutputCapture();
+                
+                BukkitTask task = Bukkit.getScheduler().runTask(MinecraftServerAPI.getInstance(), () -> {
+                    success.set(Bukkit.getServer().dispatchCommand(outputCapture, command));
+                });
+                
+                while (Bukkit.getScheduler().isCurrentlyRunning(task.getTaskId()) || 
+                       Bukkit.getScheduler().isQueued(task.getTaskId())) {
+                    try {
+                        Logger.debug("Waiting for command to finish: " + command);
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        Logger.error(e.getMessage());
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                
+                JSONObject commandResult = new JSONObject();
+                commandResult.put("command", command);
+                commandResult.put("success", success.get());
+                commandResult.put("output", outputCapture.getOutputMessages());
+                results.put(commandResult);
+            }
+            
+            JSONObject response = new JSONObject();
+            response.put("results", results);
+            response.put("totalCommands", commands.length());
+            
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", response.toString());
+            
+        } catch (Exception e) {
+            Logger.error("Error executing multiple commands: " + e.getMessage());
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.INTERNAL_ERROR, 
+                "application/json", "{\"error\":\"" + e.getMessage() + "\"}");
+        }
     }
 
     private String formatUpTime(final long uptime) {
