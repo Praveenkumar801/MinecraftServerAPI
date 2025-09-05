@@ -168,8 +168,7 @@ public final class RegisterWebHooks {
         try {
             URI uri = URI.create(url);
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(uri)
-                    .header("Content-Type", "application/json");
+                    .uri(uri);
             
             // Check for Basic Authentication in URL
             String userInfo = uri.getUserInfo();
@@ -190,8 +189,22 @@ public final class RegisterWebHooks {
                 requestBuilder.uri(uri);
             }
             
+            // Check if only message should be sent
+            boolean onlyMessage = MinecraftServerAPI.config.getBoolean("webhooks.onlyMessage", false);
+            String bodyContent;
+            
+            if (onlyMessage && jsonObject.has("message")) {
+                // Send only the message content as plain text
+                bodyContent = jsonObject.getString("message");
+                requestBuilder.header("Content-Type", "text/plain; charset=UTF-8");
+            } else {
+                // Send full JSON object
+                bodyContent = jsonObject.toString();
+                requestBuilder.header("Content-Type", "application/json");
+            }
+            
             HttpRequest request = requestBuilder
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonObject.toString()))
+                    .POST(HttpRequest.BodyPublishers.ofString(bodyContent))
                     .build();
 
             CompletableFuture<HttpResponse<String>> response = HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString());
