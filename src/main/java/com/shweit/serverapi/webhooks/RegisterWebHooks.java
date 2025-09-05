@@ -166,9 +166,31 @@ public final class RegisterWebHooks {
 
     private static void sendWebHook(final String url, final JSONObject jsonObject) {
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("Content-Type", "application/json")
+            URI uri = URI.create(url);
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .header("Content-Type", "application/json");
+            
+            // Check for Basic Authentication in URL
+            String userInfo = uri.getUserInfo();
+            if (userInfo != null && userInfo.contains(":")) {
+                // Extract username and password from URL
+                String[] credentials = userInfo.split(":", 2);
+                String username = credentials[0];
+                String password = credentials[1];
+                
+                // Create Basic Auth header
+                String auth = username + ":" + password;
+                String encodedAuth = java.util.Base64.getEncoder().encodeToString(auth.getBytes());
+                requestBuilder.header("Authorization", "Basic " + encodedAuth);
+                
+                // Rebuild URI without auth info
+                String cleanUrl = url.replaceFirst(userInfo + "@", "");
+                uri = URI.create(cleanUrl);
+                requestBuilder.uri(uri);
+            }
+            
+            HttpRequest request = requestBuilder
                     .POST(HttpRequest.BodyPublishers.ofString(jsonObject.toString()))
                     .build();
 
@@ -178,15 +200,16 @@ public final class RegisterWebHooks {
                 if (httpResponse.statusCode() == 200) {
                     Logger.debug("WebHook '" + jsonObject.get("event") + "' erfolgreich an " + url + "gesendet");
                 } else {
-                    Logger.warning("Fehler beim Senden des WebHooks '" + jsonObject.get("event") + "' an " + url + ". Antwortcode: " + httpResponse.statusCode());
+                    Logger.warning("Error while sending webhook event '" + jsonObject.get("event") + "' to " + url + ". Responde Code: " + httpResponse.statusCode());
+                    Logger.warning(httpResponse.body());
                 }
             }).exceptionally(e -> {
-                Logger.error("Fehler beim Senden des WebHooks " + jsonObject.get("event") + " an " + url + ": " + e.getMessage());
+                Logger.error("Error while sending webhook event " + jsonObject.get("event") + " to " + url + ": " + e.getMessage());
                 return null;
             });
 
         } catch (Exception e) {
-            Logger.error("Fehler beim Senden des WebHooks " + jsonObject.get("event") + " an " + url + ": " + e.getMessage());
+            Logger.error("Error while sending webhook event " + jsonObject.get("event") + " to " + url + ": " + e.getMessage());
         }
     }
 
