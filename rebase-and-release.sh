@@ -208,6 +208,15 @@ See [README.md](https://github.com/$(gh repo view --json nameWithOwner -q .nameW
                 "$JAR_FILE#MinecraftServerAPI-$VERSION.jar" > /dev/null 2>&1; then
                 
                 log_success "Release $TAG_NAME successfully created!"
+                
+                # Trigger the release workflow manually since gh CLI doesn't trigger it automatically
+                log_info "Triggering release workflow for $TAG_NAME..."
+                if gh workflow run release.yml -f release_tag="$TAG_NAME" --ref master > /dev/null 2>&1; then
+                    log_success "Release workflow triggered for $TAG_NAME"
+                else
+                    log_warning "Could not trigger release workflow for $TAG_NAME (manual trigger may be needed)"
+                fi
+                
                 SUCCESSFUL_RELEASES+=("$VERSION")
             else
                 log_error "Failed to create release $TAG_NAME!"

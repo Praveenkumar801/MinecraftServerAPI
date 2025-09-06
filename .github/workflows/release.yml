@@ -2,7 +2,13 @@ name: Release to CurseForge and Modrinth
 
 on:
   release:
-    types: [created]
+    types: [created, published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to process (e.g., v1.20.4)'
+        required: false
+        type: string
 
 jobs:
   build-and-release:
@@ -10,6 +16,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          # If workflow_dispatch, checkout the tag
+          ref: ${{ github.event.inputs.release_tag || github.ref }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -24,8 +33,26 @@ jobs:
       - name: Get artifact info
         id: artifact
         run: |
+          # For workflow_dispatch, use the input tag, otherwise use the ref name
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.release_tag }}"
+          else
+            VERSION="${GITHUB_REF_NAME}"
+          fi
+          VERSION="${VERSION#v}"  # Remove 'v' prefix if present
           echo "jar_path=$(find target/ -name 'MinecraftServerAPI-*.jar' | head -n 1)" >> $GITHUB_OUTPUT
-          echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Processing version: ${VERSION}"
+
+      - name: Extract game version from branch or tag
+        id: game_version
+        run: |
+          # Get the version for game-versions field
+          VERSION="${{ steps.artifact.outputs.version }}"
+          # Extract just the Minecraft version (e.g., 1.20.4 from v1.20.4)
+          MC_VERSION=$(echo "$VERSION" | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')
+          echo "minecraft_version=${MC_VERSION}" >> $GITHUB_OUTPUT
+          echo "Minecraft version: ${MC_VERSION}"
 
       - name: Upload to Modrinth & Curseforge
         uses: Kir-Antipov/mc-publish@v3.3
@@ -38,21 +65,26 @@ jobs:
 
           files: ${{ steps.artifact.outputs.jar_path }}
 
-          name: MinecraftServerAPI ${{ github.ref_name }}
+          name: MinecraftServerAPI ${{ steps.artifact.outputs.version }}
           version: msa-${{ steps.artifact.outputs.version }}
           version-type: release
           game-versions: |
-            >=1.21
+            ${{ steps.game_version.outputs.minecraft_version }}
           loaders: |
             paper
             spigot
             bukkit
           changelog: |
-            See [GitHub Release](${{ github.event.release.html_url }}) for changelog.
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: target/MinecraftServerAPI-*.jar
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            ## MinecraftServerAPI v${{ steps.artifact.outputs.version }}
+            
+            ### Changes
+            - Rebased on latest master branch
+            - Includes all current features and bugfixes
+            
+            ### Minecraft Version
+            Supports Minecraft ${{ steps.game_version.outputs.minecraft_version }}
+            
+            ### Installation
+            Download the JAR file and place it in your Minecraft server's `plugins` folder.
+            
+            For full documentation, see: https://github.com/${{ github.repository }}
