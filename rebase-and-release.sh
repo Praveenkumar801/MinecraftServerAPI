@@ -1,275 +1,289 @@
 #!/bin/bash
 
-# Script zum Rebasen aller release/* Branches auf master und Erstellen von GitHub Releases
-# Autor: MinecraftServerAPI Team
-# Datum: 2025-09-06
+# Script to rebase all release/* branches on master and create GitHub releases
+# Author: MinecraftServerAPI Team
+# Date: 2025-09-06
 
-set -e  # Bei Fehler beenden
+set -e  # Exit on error
 
-# Farben für Output
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Logging-Funktionen
+# Logging functions - using printf instead of echo -e to avoid -e issues
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    printf "${BLUE}[INFO]${NC} %s\n" "$1"
 }
 
 log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    printf "${GREEN}[SUCCESS]${NC} %s\n" "$1"
 }
 
 log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    printf "${YELLOW}[WARNING]${NC} %s\n" "$1"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    printf "${RED}[ERROR]${NC} %s\n" "$1"
 }
 
-# Prüfe ob wir im richtigen Verzeichnis sind
+# Check if we're in the right directory
 if [ ! -f "pom.xml" ] || [ ! -d ".git" ]; then
-    log_error "Dieses Skript muss im Root-Verzeichnis des MinecraftServerAPI-Projekts ausgeführt werden!"
+    log_error "This script must be run from the MinecraftServerAPI project root directory!"
     exit 1
 fi
 
-# Prüfe ob gh (GitHub CLI) installiert ist
+# Check if gh (GitHub CLI) is installed
 if ! command -v gh &> /dev/null; then
-    log_error "GitHub CLI (gh) ist nicht installiert. Bitte installiere es mit: brew install gh"
+    log_error "GitHub CLI (gh) is not installed. Please install it with: brew install gh"
     exit 1
 fi
 
-# Prüfe ob wir bei GitHub authentifiziert sind
+# Check if we're authenticated with GitHub
 if ! gh auth status &> /dev/null; then
-    log_error "Nicht bei GitHub authentifiziert. Bitte führe 'gh auth login' aus."
+    log_error "Not authenticated with GitHub. Please run 'gh auth login'."
     exit 1
 fi
 
-# Speichere den aktuellen Branch
+# Save current branch
 CURRENT_BRANCH=$(git branch --show-current)
-log_info "Aktueller Branch: $CURRENT_BRANCH"
+log_info "Current branch: $CURRENT_BRANCH"
 
-# Stelle sicher, dass das Working Directory sauber ist
+# Ensure working directory is clean
 if [ -n "$(git status --porcelain)" ]; then
-    log_error "Working Directory ist nicht sauber. Bitte committe oder stashe deine Änderungen."
+    log_error "Working directory is not clean. Please commit or stash your changes."
     exit 1
 fi
 
-# Hole die neuesten Änderungen
-log_info "Hole die neuesten Änderungen vom Remote..."
-git fetch --all --prune
+# Fetch latest changes
+log_info "Fetching latest changes from remote..."
+git fetch --all --prune > /dev/null 2>&1
 
-# Wechsle zu master und aktualisiere
-log_info "Wechsle zu master Branch..."
-git checkout master
-git pull origin master
+# Switch to master and update
+log_info "Switching to master branch..."
+git checkout master > /dev/null 2>&1
+git pull origin master > /dev/null 2>&1
 
-# Hole alle release/* Branches
+# Get all release/* branches
 RELEASE_BRANCHES=$(git branch -r | grep 'origin/release/' | sed 's/origin\///' | sort -V)
 
 if [ -z "$RELEASE_BRANCHES" ]; then
-    log_warning "Keine release/* Branches gefunden!"
-    git checkout "$CURRENT_BRANCH"
+    log_warning "No release/* branches found!"
+    git checkout "$CURRENT_BRANCH" > /dev/null 2>&1
     exit 0
 fi
 
-log_info "Gefundene Release-Branches:"
+log_info "Found release branches:"
 echo "$RELEASE_BRANCHES" | while read -r branch; do
-    echo "  - $branch"
+    printf "  - %s\n" "$branch"
 done
 
-# Arrays für Erfolg und Fehler
+# Arrays for success and failure tracking
 SUCCESSFUL_REBASES=()
 FAILED_REBASES=()
 SUCCESSFUL_RELEASES=()
 FAILED_RELEASES=()
 
-# Rebase alle Release-Branches
-echo ""
-log_info "=== PHASE 1: Rebase alle Release-Branches auf master ==="
-echo ""
+# Rebase all release branches
+printf "\n"
+log_info "=== PHASE 1: Rebase all release branches on master ==="
+printf "\n"
 
 for branch in $RELEASE_BRANCHES; do
-    log_info "Verarbeite Branch: $branch"
+    log_info "Processing branch: $branch"
     
-    # Checkout des Branches
-    if git checkout "$branch" 2>/dev/null || git checkout -b "$branch" "origin/$branch" 2>/dev/null; then
+    # Checkout the branch
+    if git checkout "$branch" > /dev/null 2>&1 || git checkout -b "$branch" "origin/$branch" > /dev/null 2>&1; then
         
-        # Versuche Rebase
-        log_info "Rebase $branch auf master..."
-        if git rebase master; then
-            log_success "Rebase von $branch erfolgreich!"
+        # Try rebase
+        log_info "Rebasing $branch on master..."
+        if git rebase master > /dev/null 2>&1; then
+            log_success "Rebase of $branch successful!"
             
-            # Force Push (da wir rebased haben)
-            log_info "Pushe $branch zum Remote..."
-            if git push --force-with-lease origin "$branch"; then
-                log_success "Push von $branch erfolgreich!"
+            # Force push (since we rebased)
+            log_info "Pushing $branch to remote..."
+            if git push --force-with-lease origin "$branch" > /dev/null 2>&1; then
+                log_success "Push of $branch successful!"
                 SUCCESSFUL_REBASES+=("$branch")
             else
-                log_error "Push von $branch fehlgeschlagen!"
+                # Show error output when push fails
+                log_error "Push of $branch failed!"
+                git push --force-with-lease origin "$branch" 2>&1 | sed 's/^/  /'
                 FAILED_REBASES+=("$branch")
-                git rebase --abort 2>/dev/null || true
+                git rebase --abort > /dev/null 2>&1 || true
             fi
         else
-            log_error "Rebase von $branch fehlgeschlagen! Überspringe..."
+            # Show error output when rebase fails
+            log_error "Rebase of $branch failed! Skipping..."
+            git rebase master 2>&1 | head -10 | sed 's/^/  /'
             FAILED_REBASES+=("$branch")
-            git rebase --abort 2>/dev/null || true
+            git rebase --abort > /dev/null 2>&1 || true
         fi
     else
-        log_error "Konnte Branch $branch nicht auschecken!"
+        log_error "Could not checkout branch $branch!"
         FAILED_REBASES+=("$branch")
     fi
     
-    echo ""
+    printf "\n"
 done
 
-# Wechsle zurück zu master für Release-Erstellung
-git checkout master
+# Switch back to master for release creation
+git checkout master > /dev/null 2>&1
 
-echo ""
-log_info "=== PHASE 2: Erstelle GitHub Releases ==="
-echo ""
+printf "\n"
+log_info "=== PHASE 2: Create GitHub Releases ==="
+printf "\n"
 
-# Erstelle Releases für erfolgreich gerebaste Branches
+# Create releases for successfully rebased branches
 for branch in "${SUCCESSFUL_REBASES[@]}"; do
-    # Extrahiere Version aus Branch-Namen (z.B. release/1.19.4 -> 1.19.4)
+    # Extract version from branch name (e.g. release/1.19.4 -> 1.19.4)
     VERSION=$(echo "$branch" | sed 's/release\///')
     TAG_NAME="v$VERSION"
     
-    log_info "Erstelle Release für $branch (Tag: $TAG_NAME)..."
+    log_info "Creating release for $branch (Tag: $TAG_NAME)..."
     
-    # Checkout des Branches für Release
-    git checkout "$branch"
+    # Checkout branch for release
+    git checkout "$branch" > /dev/null 2>&1
     
-    # Hole die neueste Commit-Message für Release Notes
+    # Get latest commit message for release notes
     LAST_COMMIT=$(git log -1 --pretty=format:"%s")
     
-    # Generiere Release Notes
+    # Generate release notes
     RELEASE_NOTES="## MinecraftServerAPI v$VERSION
 
 ### 🎮 Minecraft Version
 Supports Minecraft $VERSION
 
-### 📦 Änderungen
-- Rebased auf den neuesten master Branch
-- Alle aktuellen Features und Bugfixes enthalten
+### 📦 Changes
+- Rebased on latest master branch
+- Includes all current features and bugfixes
 
-### 🔄 Letzte Änderung
+### 🔄 Latest Change
 $LAST_COMMIT
 
 ### 📥 Installation
-Lade die JAR-Datei herunter und platziere sie in deinem Minecraft Server's \`plugins\` Ordner.
+Download the JAR file and place it in your Minecraft server's \`plugins\` folder.
 
-### 📖 Dokumentation
-Siehe [README.md](https://github.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/blob/$branch/README.md) für die vollständige Dokumentation.
+### 📖 Documentation
+See [README.md](https://github.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/blob/$branch/README.md) for full documentation.
 
 ---
-*Automatisch generiert am $(date '+%Y-%m-%d %H:%M:%S')*"
+*Automatically generated on $(date '+%Y-%m-%d %H:%M:%S')*"
     
-    # Erstelle Tag falls nicht vorhanden
+    # Create tag if not exists
     if ! git tag | grep -q "^$TAG_NAME$"; then
-        log_info "Erstelle Tag $TAG_NAME..."
-        git tag "$TAG_NAME"
-        git push origin "$TAG_NAME"
+        log_info "Creating tag $TAG_NAME..."
+        git tag "$TAG_NAME" > /dev/null 2>&1
+        git push origin "$TAG_NAME" > /dev/null 2>&1
     else
-        log_warning "Tag $TAG_NAME existiert bereits, aktualisiere..."
-        git tag -f "$TAG_NAME"
-        git push origin -f "$TAG_NAME"
+        log_warning "Tag $TAG_NAME already exists, updating..."
+        git tag -f "$TAG_NAME" > /dev/null 2>&1
+        git push origin -f "$TAG_NAME" > /dev/null 2>&1
     fi
     
-    # Baue das Projekt
-    log_info "Baue JAR-Datei für $VERSION..."
+    # Build the project
+    log_info "Building JAR file for $VERSION..."
     if mvn clean package -DskipTests > /dev/null 2>&1; then
         JAR_FILE=$(find target -name "MinecraftServerAPI-*.jar" | head -1)
         
         if [ -f "$JAR_FILE" ]; then
-            # Erstelle oder aktualisiere Release
-            log_info "Erstelle GitHub Release..."
+            # Create or update release
+            log_info "Creating GitHub Release..."
             
-            # Prüfe ob Release bereits existiert
+            # Check if release already exists
             if gh release view "$TAG_NAME" > /dev/null 2>&1; then
-                log_warning "Release $TAG_NAME existiert bereits, lösche und erstelle neu..."
-                gh release delete "$TAG_NAME" --yes
+                log_warning "Release $TAG_NAME already exists, deleting and recreating..."
+                gh release delete "$TAG_NAME" --yes > /dev/null 2>&1
             fi
             
-            # Erstelle neues Release
+            # Create new release (don't use --draft to ensure workflow triggers)
             if gh release create "$TAG_NAME" \
                 --title "MinecraftServerAPI v$VERSION" \
                 --notes "$RELEASE_NOTES" \
                 --target "$branch" \
-                "$JAR_FILE#MinecraftServerAPI-$VERSION.jar"; then
+                --latest=false \
+                "$JAR_FILE#MinecraftServerAPI-$VERSION.jar" > /dev/null 2>&1; then
                 
-                log_success "Release $TAG_NAME erfolgreich erstellt!"
+                log_success "Release $TAG_NAME successfully created!"
                 SUCCESSFUL_RELEASES+=("$VERSION")
             else
-                log_error "Fehler beim Erstellen von Release $TAG_NAME!"
+                log_error "Failed to create release $TAG_NAME!"
+                # Show error output when release creation fails
+                gh release create "$TAG_NAME" \
+                    --title "MinecraftServerAPI v$VERSION" \
+                    --notes "$RELEASE_NOTES" \
+                    --target "$branch" \
+                    --latest=false \
+                    "$JAR_FILE#MinecraftServerAPI-$VERSION.jar" 2>&1 | sed 's/^/  /'
                 FAILED_RELEASES+=("$VERSION")
             fi
         else
-            log_error "JAR-Datei nicht gefunden für $VERSION!"
+            log_error "JAR file not found for $VERSION!"
             FAILED_RELEASES+=("$VERSION")
         fi
     else
-        log_error "Build fehlgeschlagen für $VERSION!"
+        log_error "Build failed for $VERSION!"
+        # Show Maven error output
+        mvn clean package -DskipTests 2>&1 | tail -20 | sed 's/^/  /'
         FAILED_RELEASES+=("$VERSION")
     fi
     
-    echo ""
+    printf "\n"
 done
 
-# Zurück zum ursprünglichen Branch
-log_info "Wechsle zurück zu $CURRENT_BRANCH..."
-git checkout "$CURRENT_BRANCH"
+# Back to original branch
+log_info "Switching back to $CURRENT_BRANCH..."
+git checkout "$CURRENT_BRANCH" > /dev/null 2>&1
 
-# Zusammenfassung
-echo ""
-echo "========================================"
-echo "           ZUSAMMENFASSUNG              "
-echo "========================================"
-echo ""
+# Summary
+printf "\n"
+printf "========================================\n"
+printf "                SUMMARY                 \n"
+printf "========================================\n"
+printf "\n"
 
 if [ ${#SUCCESSFUL_REBASES[@]} -gt 0 ]; then
-    log_success "Erfolgreich gerebaste Branches (${#SUCCESSFUL_REBASES[@]}):"
+    log_success "Successfully rebased branches (${#SUCCESSFUL_REBASES[@]}):"
     for branch in "${SUCCESSFUL_REBASES[@]}"; do
-        echo "  ✅ $branch"
+        printf "  ✅ %s\n" "$branch"
     done
 fi
 
 if [ ${#FAILED_REBASES[@]} -gt 0 ]; then
-    echo ""
-    log_error "Fehlgeschlagene Rebases (${#FAILED_REBASES[@]}):"
+    printf "\n"
+    log_error "Failed rebases (${#FAILED_REBASES[@]}):"
     for branch in "${FAILED_REBASES[@]}"; do
-        echo "  ❌ $branch"
+        printf "  ❌ %s\n" "$branch"
     done
 fi
 
 if [ ${#SUCCESSFUL_RELEASES[@]} -gt 0 ]; then
-    echo ""
-    log_success "Erfolgreich erstellte Releases (${#SUCCESSFUL_RELEASES[@]}):"
+    printf "\n"
+    log_success "Successfully created releases (${#SUCCESSFUL_RELEASES[@]}):"
     for version in "${SUCCESSFUL_RELEASES[@]}"; do
-        echo "  ✅ v$version"
+        printf "  ✅ v%s\n" "$version"
     done
 fi
 
 if [ ${#FAILED_RELEASES[@]} -gt 0 ]; then
-    echo ""
-    log_error "Fehlgeschlagene Releases (${#FAILED_RELEASES[@]}):"
+    printf "\n"
+    log_error "Failed releases (${#FAILED_RELEASES[@]}):"
     for version in "${FAILED_RELEASES[@]}"; do
-        echo "  ❌ v$version"
+        printf "  ❌ v%s\n" "$version"
     done
 fi
 
-echo ""
-echo "========================================"
+printf "\n"
+printf "========================================\n"
 
-# Exit-Code basierend auf Erfolg
+# Exit code based on success
 if [ ${#FAILED_REBASES[@]} -eq 0 ] && [ ${#FAILED_RELEASES[@]} -eq 0 ]; then
-    log_success "Alle Operationen erfolgreich abgeschlossen! 🎉"
+    log_success "All operations completed successfully! 🎉"
     exit 0
 else
-    log_warning "Einige Operationen sind fehlgeschlagen. Bitte prüfe die Fehler oben."
+    log_warning "Some operations failed. Please check the errors above."
     exit 1
 fi
