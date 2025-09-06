@@ -2,6 +2,7 @@ package com.shweit.serverapi.endpoints.v1;
 
 import com.shweit.serverapi.MinecraftServerAPI;
 import com.shweit.serverapi.WebServer;
+import com.shweit.serverapi.handlers.BetterCommandExecutor;
 import com.shweit.serverapi.handlers.CommandOutputCapture;
 import com.shweit.serverapi.handlers.LogHandler;
 import com.shweit.serverapi.listeners.ChatListener;
@@ -26,7 +27,10 @@ import java.lang.management.*;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -227,11 +231,10 @@ public final class ServerAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Invalid Command.\"}");
         }
 
-        AtomicBoolean success = new AtomicBoolean(false);
-        CommandOutputCapture outputCapture = new CommandOutputCapture();
+        final BetterCommandExecutor.CommandResult[] result = new BetterCommandExecutor.CommandResult[1];
 
         BukkitTask t1 = Bukkit.getScheduler().runTask(MinecraftServerAPI.getInstance(), () -> {
-            success.set(Bukkit.getServer().dispatchCommand(outputCapture, command));
+            result[0] = BetterCommandExecutor.executeCommand(command);
         });
 
         while (Bukkit.getScheduler().isCurrentlyRunning(t1.getTaskId()) || Bukkit.getScheduler().isQueued(t1.getTaskId())) {
@@ -246,8 +249,13 @@ public final class ServerAPI {
         }
 
         JSONObject jsonResponse = new JSONObject();
-        jsonResponse.put("success", success.get());
-        jsonResponse.put("output", outputCapture.getOutputMessages());
+        if (result[0] != null) {
+            jsonResponse.put("success", result[0].isSuccess());
+            jsonResponse.put("output", result[0].getOutput());
+        } else {
+            jsonResponse.put("success", false);
+            jsonResponse.put("output", new ArrayList<>());
+        }
 
         return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", jsonResponse.toString());
     }
@@ -346,11 +354,10 @@ public final class ServerAPI {
             for (int i = 0; i < commands.length(); i++) {
                 String command = commands.getString(i);
                 
-                AtomicBoolean success = new AtomicBoolean(false);
-                CommandOutputCapture outputCapture = new CommandOutputCapture();
+                final BetterCommandExecutor.CommandResult[] result = new BetterCommandExecutor.CommandResult[1];
                 
                 BukkitTask task = Bukkit.getScheduler().runTask(MinecraftServerAPI.getInstance(), () -> {
-                    success.set(Bukkit.getServer().dispatchCommand(outputCapture, command));
+                    result[0] = BetterCommandExecutor.executeCommand(command);
                 });
                 
                 while (Bukkit.getScheduler().isCurrentlyRunning(task.getTaskId()) || 
@@ -364,11 +371,13 @@ public final class ServerAPI {
                     }
                 }
                 
-                JSONObject commandResult = new JSONObject();
-                commandResult.put("command", command);
-                commandResult.put("success", success.get());
-                commandResult.put("output", outputCapture.getOutputMessages());
-                results.put(commandResult);
+                if (result[0] != null) {
+                    JSONObject commandResult = new JSONObject();
+                    commandResult.put("command", result[0].getCommand());
+                    commandResult.put("success", result[0].isSuccess());
+                    commandResult.put("output", result[0].getOutput());
+                    results.put(commandResult);
+                }
             }
             
             JSONObject response = new JSONObject();

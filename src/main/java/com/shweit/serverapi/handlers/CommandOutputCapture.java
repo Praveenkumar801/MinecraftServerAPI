@@ -33,11 +33,13 @@ public class CommandOutputCapture implements ConsoleCommandSender {
     @Override
     public void sendMessage(String message) {
         // Capture the message
-        HashMap<String, String> outputMessage = new HashMap<>();
-        outputMessage.put("message", message);
-        String readableTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(new Date());
-        outputMessage.put("time", readableTime);
-        outputMessages.add(outputMessage);
+        if (message != null && !message.isEmpty()) {
+            HashMap<String, String> outputMessage = new HashMap<>();
+            outputMessage.put("message", message);
+            String readableTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(new Date());
+            outputMessage.put("time", readableTime);
+            outputMessages.add(outputMessage);
+        }
         
         // Forward to the original sender
         originalSender.sendMessage(message);
