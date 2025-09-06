@@ -45,10 +45,35 @@ jobs:
         run: |
           # Get the version for game-versions field
           VERSION="${{ steps.artifact.outputs.version }}"
-          # Extract just the Minecraft version (e.g., 1.20.4 from v1.20.4)
-          MC_VERSION=$(echo "$VERSION" | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')
-          echo "minecraft_version=${MC_VERSION}" >> $GITHUB_OUTPUT
-          echo "Minecraft version: ${MC_VERSION}"
+          
+          # Check if version contains 'x' (wildcard)
+          if [[ "$VERSION" == *".x"* ]]; then
+            # It's a wildcard version like 1.21.x
+            # Extract base version (e.g., 1.21 from 1.21.x)
+            BASE_VERSION=$(echo "$VERSION" | sed 's/\.x$//' | grep -oE '[0-9]+\.[0-9]+')
+            
+            # Calculate next minor version for upper bound
+            MAJOR=$(echo "$BASE_VERSION" | cut -d. -f1)
+            MINOR=$(echo "$BASE_VERSION" | cut -d. -f2)
+            NEXT_MINOR=$((MINOR + 1))
+            NEXT_VERSION="${MAJOR}.${NEXT_MINOR}"
+            
+            # Create version range: [1.20,1.21)
+            # [1.20 = includes 1.20 and higher
+            # ,1.21) = but excludes 1.21 and higher
+            # Result: 1.20, 1.20.1, 1.20.2, ..., 1.20.99 (all 1.20.x versions)
+            VERSIONS="[${BASE_VERSION},${NEXT_VERSION})"
+            
+            echo "minecraft_versions=${VERSIONS}" >> $GITHUB_OUTPUT
+            echo "Minecraft versions (wildcard): ${VERSIONS} (includes ALL ${BASE_VERSION}.x versions including ${BASE_VERSION} itself)"
+          else
+            # It's a specific version like 1.21.4 or 1.21
+            MC_VERSION=$(echo "$VERSION" | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')
+            
+            # Just use the exact version - 1.21 is 1.21, 1.21.4 is 1.21.4
+            echo "minecraft_versions=${MC_VERSION}" >> $GITHUB_OUTPUT
+            echo "Minecraft version: ${MC_VERSION} (exact)"
+          fi
 
       - name: Upload to Modrinth & Curseforge
         uses: Kir-Antipov/mc-publish@v3.3
@@ -65,7 +90,7 @@ jobs:
           version: msa-${{ steps.artifact.outputs.version }}
           version-type: release
           game-versions: |
-            ${{ steps.game_version.outputs.minecraft_version }}
+            ${{ steps.game_version.outputs.minecraft_versions }}
           loaders: |
             paper
             spigot
@@ -78,7 +103,7 @@ jobs:
             - Includes all current features and bugfixes
             
             ### Minecraft Version
-            Supports Minecraft ${{ steps.game_version.outputs.minecraft_version }}
+            Supports Minecraft ${{ steps.artifact.outputs.version }}
             
             ### Installation
             Download the JAR file and place it in your Minecraft server's `plugins` folder.
