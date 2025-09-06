@@ -27,6 +27,9 @@ public final class WorldLoad implements WebHook, Listener {
         jsonObject.put("event", eventName);
         jsonObject.put("world", event.getWorld().getName());
 
+        String message = "World '" + event.getWorld().getName() + "' has been loaded";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

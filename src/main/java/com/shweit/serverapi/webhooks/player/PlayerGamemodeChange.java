@@ -29,6 +29,10 @@ public final class PlayerGamemodeChange implements WebHook, Listener {
         jsonObject.put("location", event.getPlayer().getLocation().toString());
         jsonObject.put("gamemode", event.getNewGameMode().name());
 
+        String gamemodeName = event.getNewGameMode().name().toLowerCase();
+        String message = "Player " + event.getPlayer().getName() + " changed gamemode to " + gamemodeName;
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

@@ -33,6 +33,12 @@ public final class CreeperPower implements WebHook, Listener {
             jsonObject.put("power", event.getLightning().getCausingPlayer().getName());
         }
 
+        String message = "A creeper was charged by " + event.getCause().name().toLowerCase().replace("_", " ");
+        if (event.getLightning().getCausingPlayer() != null) {
+            message += " caused by " + event.getLightning().getCausingPlayer().getName();
+        }
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
 
     }

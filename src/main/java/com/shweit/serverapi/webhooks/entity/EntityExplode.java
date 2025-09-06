@@ -31,6 +31,10 @@ public final class EntityExplode implements WebHook, Listener {
          jsonObject.put("blockList", event.blockList().toString());
          jsonObject.put("explosionResult", event.getExplosionResult().name());
 
+         String entityName = event.getEntity().getType().name().toLowerCase().replace("_", " ");
+         String message = "A " + entityName + " exploded and destroyed " + event.blockList().size() + " blocks";
+         jsonObject.put("message", message);
+
          RegisterWebHooks.sendToAllUrls(jsonObject);
      }
 }

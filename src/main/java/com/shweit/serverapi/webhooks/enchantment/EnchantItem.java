@@ -32,6 +32,11 @@ public final class EnchantItem implements WebHook, Listener {
         jsonObject.put("expLevelCost", event.getExpLevelCost());
         jsonObject.put("levelHint", event.getLevelHint());
 
+        String message = "Player " + event.getEnchanter().getName() + " enchanted a " + 
+                        event.getItem().getType().name().toLowerCase().replace("_", " ") + 
+                        " with " + event.getEnchantsToAdd().keySet().toString();
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

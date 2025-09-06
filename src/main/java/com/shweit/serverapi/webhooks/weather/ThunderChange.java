@@ -28,6 +28,10 @@ public final class ThunderChange implements WebHook, Listener {
         jsonObject.put("world", event.getWorld().getName());
         jsonObject.put("thunder", event.toThunderState());
 
+        String thunderState = event.toThunderState() ? "started" : "stopped";
+        String message = "Thunder has " + thunderState + " in world '" + event.getWorld().getName() + "'";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

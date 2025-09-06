@@ -33,6 +33,9 @@ public final class PlayerCommand implements WebHook, Listener {
              jsonObject.put("ip", event.getPlayer().getAddress().getAddress().getHostAddress());
          }
 
+         String message = "Player " + event.getPlayer().getName() + " executed command: " + event.getMessage();
+         jsonObject.put("message", message);
+
          RegisterWebHooks.sendToAllUrls(jsonObject);
      }
 }

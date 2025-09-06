@@ -33,6 +33,11 @@ public final class CraftItem implements WebHook, Listener {
              jsonObject.put("result", event.getInventory().getResult().getType().name());
          }
 
+         String itemName = event.getRecipe().getResult().getType().name().toLowerCase().replace("_", " ");
+         String playerName = event.getWhoClicked().getName();
+         String message = "Player " + playerName + " crafted " + itemName;
+         jsonObject.put("message", message);
+
          RegisterWebHooks.sendToAllUrls(jsonObject);
      }
 }

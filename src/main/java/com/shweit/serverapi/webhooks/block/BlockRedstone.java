@@ -30,6 +30,10 @@ public final class BlockRedstone implements WebHook, Listener {
         jsonObject.put("oldCurrent", event.getOldCurrent());
         jsonObject.put("newCurrent", event.getNewCurrent());
 
+        String blockName = event.getBlock().getType().name().toLowerCase().replace("_", " ");
+        String message = "Redstone current changed in " + blockName + " from " + event.getOldCurrent() + " to " + event.getNewCurrent();
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

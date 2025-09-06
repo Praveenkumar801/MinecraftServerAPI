@@ -28,9 +28,13 @@ public final class Brew implements WebHook, Listener {
         jsonObject.put("fuelLevel", event.getFuelLevel());
         jsonObject.put("location", event.getBlock().getLocation().toString());
 
+        String message = "Brewing stand finished brewing";
         if (event.getContents().getIngredient() != null) {
             jsonObject.put("ingredient", event.getContents().getIngredient().getType().name());
+            String ingredientName = event.getContents().getIngredient().getType().name().toLowerCase().replace("_", " ");
+            message = "Brewing stand finished brewing with " + ingredientName;
         }
+        jsonObject.put("message", message);
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

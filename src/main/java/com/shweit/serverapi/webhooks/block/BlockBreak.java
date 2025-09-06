@@ -29,6 +29,10 @@ public final class BlockBreak implements WebHook, Listener {
         jsonObject.put("block", event.getBlock().getType().name());
         jsonObject.put("location", event.getBlock().getLocation().toString());
 
+        String blockName = event.getBlock().getType().name().toLowerCase().replace("_", " ");
+        String message = "Player " + event.getPlayer().getName() + " broke a " + blockName + " block";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

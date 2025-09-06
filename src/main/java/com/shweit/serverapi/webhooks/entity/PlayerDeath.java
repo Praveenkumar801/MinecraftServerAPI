@@ -29,6 +29,12 @@ public final class PlayerDeath implements WebHook, Listener {
         jsonObject.put("location", event.getEntity().getLocation().toString());
         jsonObject.put("cause", event.getDeathMessage());
 
+        String message = "Player " + event.getEntity().getName() + " died";
+        if (event.getDeathMessage() != null && !event.getDeathMessage().isEmpty()) {
+            message = event.getDeathMessage();
+        }
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

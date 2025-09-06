@@ -33,6 +33,12 @@ public final class PlayerKick implements WebHook, Listener {
                  jsonObject.put("ip", event.getPlayer().getAddress().getAddress().getHostAddress());
              }
 
+             String message = "Player " + event.getPlayer().getName() + " was kicked";
+             if (event.getReason() != null && !event.getReason().trim().isEmpty()) {
+                 message += " for: " + event.getReason();
+             }
+             jsonObject.put("message", message);
+
              RegisterWebHooks.sendToAllUrls(jsonObject);
          }
 }

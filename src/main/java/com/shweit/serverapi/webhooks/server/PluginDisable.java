@@ -30,6 +30,10 @@ public final class PluginDisable implements WebHook, Listener {
         jsonObject.put("plugin_author", event.getPlugin().getDescription().getAuthors().get(0));
         jsonObject.put("plugin_description", event.getPlugin().getDescription().getDescription());
 
+        String message = "Plugin '" + event.getPlugin().getName() + "' v" + 
+                        event.getPlugin().getDescription().getVersion() + " has been disabled";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

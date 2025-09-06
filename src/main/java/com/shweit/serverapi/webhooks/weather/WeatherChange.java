@@ -28,6 +28,10 @@ public final class WeatherChange implements WebHook, Listener {
         jsonObject.put("world", event.getWorld().getName());
         jsonObject.put("rain", event.toWeatherState());
 
+        String weatherState = event.toWeatherState() ? "started raining" : "stopped raining";
+        String message = "Weather has changed: " + weatherState + " in world '" + event.getWorld().getName() + "'";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

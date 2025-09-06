@@ -29,6 +29,10 @@ public final class EntityTame implements WebHook, Listener {
         jsonObject.put("location", event.getEntity().getLocation().toString());
         jsonObject.put("owner", event.getOwner().getName());
 
+        String entityName = event.getEntity().getType().name().toLowerCase().replace("_", " ");
+        String message = "Player " + event.getOwner().getName() + " tamed a " + entityName;
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 

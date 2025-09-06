@@ -32,6 +32,15 @@ public final class PlayerRespawn implements WebHook, Listener {
          jsonObject.put("isAnchorSpawn", event.isAnchorSpawn());
          jsonObject.put("respawnReason", event.getRespawnReason().name());
 
+         String spawnType = "at their spawn point";
+         if (event.isBedSpawn()) {
+             spawnType = "at their bed";
+         } else if (event.isAnchorSpawn()) {
+             spawnType = "at their respawn anchor";
+         }
+         String message = "Player " + event.getPlayer().getName() + " respawned " + spawnType;
+         jsonObject.put("message", message);
+
          RegisterWebHooks.sendToAllUrls(jsonObject);
      }
 }

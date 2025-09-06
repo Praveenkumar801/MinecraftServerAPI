@@ -29,6 +29,10 @@ public final class FurnaceBurn implements WebHook, Listener {
         jsonObject.put("burnTime", event.getBurnTime());
         jsonObject.put("fuel", event.getFuel().getType().name());
 
+        String fuelName = event.getFuel().getType().name().toLowerCase().replace("_", " ");
+        String message = "Furnace started burning " + fuelName + " for " + event.getBurnTime() + " ticks";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

@@ -31,6 +31,10 @@ public final class BlockPlace implements WebHook, Listener {
         jsonObject.put("placedAgainst", event.getBlockAgainst().getType().name());
         jsonObject.put("hand", event.getHand().name());
 
+        String blockName = event.getBlock().getType().name().toLowerCase().replace("_", " ");
+        String message = "Player " + event.getPlayer().getName() + " placed a " + blockName + " block";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

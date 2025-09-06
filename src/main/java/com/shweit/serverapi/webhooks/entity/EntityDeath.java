@@ -40,6 +40,13 @@ public final class EntityDeath implements WebHook, Listener {
             jsonObject.put("cause", event.getEntity().getLastDamageCause().getCause().name());
         }
 
+        String entityName = event.getEntity().getType().name().toLowerCase().replace("_", " ");
+        String message = "A " + entityName + " died";
+        if (event.getEntity().getKiller() != null) {
+            message = "A " + entityName + " was killed by " + event.getEntity().getKiller().getName();
+        }
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

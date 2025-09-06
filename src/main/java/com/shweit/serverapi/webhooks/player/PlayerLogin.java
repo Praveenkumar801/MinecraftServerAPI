@@ -29,6 +29,9 @@ public final class PlayerLogin implements WebHook, Listener {
         jsonObject.put("location", event.getPlayer().getLocation().toString());
         jsonObject.put("ip", event.getAddress().getHostAddress());
 
+        String message = "Player " + event.getPlayer().getName() + " joined the server";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 

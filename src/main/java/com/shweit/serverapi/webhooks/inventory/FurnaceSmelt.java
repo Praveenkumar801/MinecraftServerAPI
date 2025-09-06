@@ -29,6 +29,11 @@ public final class FurnaceSmelt implements WebHook, Listener {
         jsonObject.put("result", event.getResult().getType().name());
         jsonObject.put("source", event.getSource().getType().name());
 
+        String sourceName = event.getSource().getType().name().toLowerCase().replace("_", " ");
+        String resultName = event.getResult().getType().name().toLowerCase().replace("_", " ");
+        String message = "Furnace smelted " + sourceName + " into " + resultName;
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

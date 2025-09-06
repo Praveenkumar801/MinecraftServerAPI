@@ -28,6 +28,10 @@ public final class LightningStrike implements WebHook, Listener {
         jsonObject.put("location", event.getLightning().getLocation().toString());
         jsonObject.put("cause", event.getCause().name());
 
+        String causeName = event.getCause().name().toLowerCase().replace("_", " ");
+        String message = "Lightning struck due to " + causeName;
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

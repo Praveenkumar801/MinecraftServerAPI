@@ -29,6 +29,10 @@ public final class PlayerItemBreak implements WebHook, Listener {
         jsonObject.put("location", event.getPlayer().getLocation().toString());
         jsonObject.put("item", event.getBrokenItem().getType().name());
 
+        String itemName = event.getBrokenItem().getType().name().toLowerCase().replace("_", " ");
+        String message = "Player " + event.getPlayer().getName() + "'s " + itemName + " broke";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

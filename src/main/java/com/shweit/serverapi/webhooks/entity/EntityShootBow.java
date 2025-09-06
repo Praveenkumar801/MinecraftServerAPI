@@ -30,6 +30,10 @@ public final class EntityShootBow implements WebHook, Listener {
         jsonObject.put("projectile", event.getProjectile().getType().name());
         jsonObject.put("force", event.getForce());
 
+        String entityName = event.getEntity().getType().name().toLowerCase().replace("_", " ");
+        String message = "A " + entityName + " shot a bow with force " + String.format("%.2f", event.getForce());
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

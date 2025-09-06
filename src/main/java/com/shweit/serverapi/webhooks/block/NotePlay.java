@@ -31,6 +31,11 @@ public final class NotePlay implements WebHook, Listener {
         jsonObject.put("pitch", event.getNote().getPitch());
         jsonObject.put("location", event.getBlock().getLocation().toString());
 
+        String instrumentName = event.getInstrument().name().toLowerCase().replace("_", " ");
+        String toneName = event.getNote().getTone().name();
+        String message = "Note block played " + toneName + " with " + instrumentName + " (octave " + event.getNote().getOctave() + ")";
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

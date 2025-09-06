@@ -28,6 +28,11 @@ public final class CreatureSpawn implements WebHook, Listener {
         jsonObject.put("location", event.getEntity().getLocation().toString());
         jsonObject.put("spawnReason", event.getSpawnReason().name());
 
+        String entityName = event.getEntity().getType().name().toLowerCase().replace("_", " ");
+        String reason = event.getSpawnReason().name().toLowerCase().replace("_", " ");
+        String message = "A " + entityName + " spawned due to " + reason;
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

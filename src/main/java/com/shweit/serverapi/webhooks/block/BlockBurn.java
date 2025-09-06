@@ -31,6 +31,11 @@ public final class BlockBurn implements WebHook, Listener {
         jsonObject.put("location", event.getBlock().getLocation().toString());
         jsonObject.put("ignitingBlock", Objects.requireNonNull(event.getIgnitingBlock()).getType().name());
 
+        String blockName = event.getBlock().getType().name().toLowerCase().replace("_", " ");
+        String ignitingBlockName = Objects.requireNonNull(event.getIgnitingBlock()).getType().name().toLowerCase().replace("_", " ");
+        String message = "A " + blockName + " block was burned by " + ignitingBlockName;
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

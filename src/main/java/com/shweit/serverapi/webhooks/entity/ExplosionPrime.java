@@ -29,6 +29,10 @@ public final class ExplosionPrime implements WebHook, Listener {
         jsonObject.put("location", event.getEntity().getLocation().toString());
         jsonObject.put("radius", event.getYield());
 
+        String entityName = event.getEntity().getType().name().toLowerCase().replace("_", " ");
+        String message = "A " + entityName + " exploded with yield " + event.getYield();
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

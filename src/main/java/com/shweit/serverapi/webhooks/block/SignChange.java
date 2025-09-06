@@ -34,6 +34,13 @@ public final class SignChange implements WebHook, Listener {
         jsonObject.put("player", event.getPlayer().getName());
         jsonObject.put("side", event.getSide().name());
 
+        String signText = String.join(" ", event.getLine(0), event.getLine(1), event.getLine(2), event.getLine(3)).trim();
+        String message = "Player " + event.getPlayer().getName() + " updated a sign";
+        if (!signText.isEmpty()) {
+            message += " with text: " + signText;
+        }
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }

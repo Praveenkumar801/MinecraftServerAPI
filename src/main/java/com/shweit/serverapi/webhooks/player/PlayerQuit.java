@@ -29,6 +29,12 @@ public final class PlayerQuit implements WebHook, Listener {
         jsonObject.put("location", event.getPlayer().getLocation().toString());
         jsonObject.put("quitMessage", event.getQuitMessage());
 
+        String message = "Player " + event.getPlayer().getName() + " left the server";
+        if (event.getQuitMessage() != null && !event.getQuitMessage().trim().isEmpty()) {
+            message = event.getQuitMessage();
+        }
+        jsonObject.put("message", message);
+
         RegisterWebHooks.sendToAllUrls(jsonObject);
     }
 }
