@@ -252,7 +252,19 @@ public final class PlayerAPI {
 
     public NanoHTTPD.Response getPlayerInventorySlot(final Map<String, String> params) {
         String username = params.get("username");
-        int i = Integer.parseInt(params.get("slot"));
+        String slotStr = params.get("slot");
+        if (slotStr == null) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Missing slot parameter.\"}");
+        }
+        int i;
+        try {
+            i = Integer.parseInt(slotStr);
+        } catch (NumberFormatException e) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Invalid slot number.\"}");
+        }
+        if (i < 0 || i > 40) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Slot must be between 0 and 40.\"}");
+        }
         UUID uuid = Helper.usernameToUUID(username);
 
         if (uuid == null) {
@@ -416,13 +428,22 @@ public final class PlayerAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "application/json", "{}");
         }
 
-        // Get location from request
         String worldName = params.get("world");
-        double x = Double.parseDouble(params.get("x"));
-        double y = Double.parseDouble(params.get("y"));
-        double z = Double.parseDouble(params.get("z"));
-        float yaw = params.get("yaw") != null ? Float.parseFloat(params.get("yaw")) : player.getLocation().getYaw();
-        float pitch = params.get("pitch") != null ? Float.parseFloat(params.get("pitch")) : player.getLocation().getPitch();
+        if (worldName == null || params.get("x") == null || params.get("y") == null || params.get("z") == null) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Missing required parameters: world, x, y, z.\"}");
+        }
+
+        double x, y, z;
+        float yaw, pitch;
+        try {
+            x = Double.parseDouble(params.get("x"));
+            y = Double.parseDouble(params.get("y"));
+            z = Double.parseDouble(params.get("z"));
+            yaw = params.get("yaw") != null ? Float.parseFloat(params.get("yaw")) : player.getLocation().getYaw();
+            pitch = params.get("pitch") != null ? Float.parseFloat(params.get("pitch")) : player.getLocation().getPitch();
+        } catch (NumberFormatException e) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Coordinates must be valid numbers.\"}");
+        }
 
         World world = Bukkit.getWorld(worldName);
         if (world == null) {

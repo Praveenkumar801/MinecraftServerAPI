@@ -24,7 +24,7 @@ jobs:
           VERSION: "${{ matrix.minecraft-version }}"
           TYPE: "PAPER"
           ENABLE_RCON: "true"
-          RCON_PASSWORD: "testing"
+          RCON_PASSWORD: ${{ secrets.RCON_PASSWORD }}
           RCON_PORT: 25575
         options: >-
           --health-cmd "mc-health"
@@ -52,11 +52,14 @@ jobs:
           echo "Minecraft server is ready!"
           
       - name: Copy plugin to server
+        env:
+          MCAPI_TEST_KEY: ${{ secrets.MCAPI_TEST_KEY }}
         run: |
           CONTAINER_ID=$(docker ps -q --filter ancestor=itzg/minecraft-server:latest)
           docker cp target/MinecraftServerAPI-*.jar $CONTAINER_ID:/data/plugins/
           docker exec $CONTAINER_ID mkdir -p /data/plugins/MinecraftServerAPI
-          docker cp docker/test.config.yml $CONTAINER_ID:/data/plugins/MinecraftServerAPI/config.yml
+          sed "s/\${MCAPI_TEST_KEY}/$MCAPI_TEST_KEY/" docker/test.config.yml > /tmp/test.config.yml
+          docker cp /tmp/test.config.yml $CONTAINER_ID:/data/plugins/MinecraftServerAPI/config.yml
           
       - name: Reload server and verify plugin
         run: |
@@ -76,5 +79,5 @@ jobs:
       - name: Test API endpoint
         run: |
           # Test that the API is responding
-          curl -f -H "Authorization: TestKey" http://localhost:7000/v1/ping || (echo "API endpoint not responding" && exit 1)
+          curl -f -H "Authorization: ${{ secrets.MCAPI_TEST_KEY }}" http://localhost:7000/v1/ping || (echo "API endpoint not responding" && exit 1)
           echo "API endpoint is working!"

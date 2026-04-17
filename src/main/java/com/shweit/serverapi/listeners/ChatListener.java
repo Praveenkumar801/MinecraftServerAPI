@@ -5,9 +5,11 @@ import org.bukkit.event.Listener;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 public final class ChatListener implements Listener {
-    private final List<HashMap<String, String>> messages = new ArrayList<>();
+    private static final int MAX_MESSAGES = 1000;
+    private final Deque<HashMap<String, String>> messages = new ConcurrentLinkedDeque<>();
 
     @EventHandler
     public void onPlayerChat(final org.bukkit.event.player.AsyncPlayerChatEvent event) {
@@ -17,10 +19,13 @@ public final class ChatListener implements Listener {
 
         String readableTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(new Date());
         message.put("time", readableTime);
-        messages.add(message);
+        messages.addLast(message);
+        while (messages.size() > MAX_MESSAGES) {
+            messages.pollFirst();
+        }
     }
 
     public List<HashMap<String, String>> getMessages() {
-        return messages;
+        return new ArrayList<>(messages);
     }
 }

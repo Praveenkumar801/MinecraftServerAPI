@@ -31,13 +31,31 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.shweit.serverapi.utils.Helper.formatSize;
 
 public final class ServerAPI {
+    private static final Set<String> BLOCKED_COMMANDS = Set.of(
+        "op", "deop", "stop", "ban-ip", "pardon-ip",
+        "save-off", "save-on", "whitelist",
+        "minecraft:op", "minecraft:deop", "minecraft:stop",
+        "minecraft:ban-ip", "minecraft:pardon-ip"
+    );
+
+    private static final Set<String> SENSITIVE_PROPERTIES = Set.of(
+        "rcon.password", "rcon.port", "enable-rcon", "server-ip"
+    );
+
+    private static final Set<String> BLOCKED_PROPERTY_KEYS = Set.of(
+        "rcon.password", "enable-rcon", "online-mode",
+        "server-ip", "server-port", "enable-command-block"
+    );
+
     private final ChatListener chatListener;
     private final LogHandler logHandler;
 
@@ -187,7 +205,9 @@ public final class ServerAPI {
             properties.load(input);
             JSONObject jsonResponse = new JSONObject();
             for (String key : properties.stringPropertyNames()) {
-                jsonResponse.put(key, properties.getProperty(key));
+                if (!SENSITIVE_PROPERTIES.contains(key)) {
+                    jsonResponse.put(key, properties.getProperty(key));
+                }
             }
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", jsonResponse.toString());
         } catch (IOException e) {
@@ -202,6 +222,10 @@ public final class ServerAPI {
 
         if (key == null || value == null) {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Missing key or value.\"}");
+        }
+
+        if (BLOCKED_PROPERTY_KEYS.contains(key)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.FORBIDDEN, "application/json", "{\"error\":\"Modifying this property is not allowed via the API.\"}");
         }
 
         Properties properties = new Properties();
@@ -224,11 +248,21 @@ public final class ServerAPI {
         }
     }
 
+    private static boolean isBlockedCommand(final String command) {
+        String trimmed = command.trim().toLowerCase(Locale.ROOT);
+        String baseCommand = trimmed.split("\\s+")[0].replaceFirst("^/", "");
+        return BLOCKED_COMMANDS.contains(baseCommand);
+    }
+
     public NanoHTTPD.Response execCommand(final Map<String, String> params) {
         String command = params.get("command");
 
         if (command == null) {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Invalid Command.\"}");
+        }
+
+        if (isBlockedCommand(command)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.FORBIDDEN, "application/json", "{\"error\":\"This command is not allowed via the API.\"}");
         }
 
         final BetterCommandExecutor.CommandResult[] result = new BetterCommandExecutor.CommandResult[1];
@@ -353,7 +387,16 @@ public final class ServerAPI {
             
             for (int i = 0; i < commands.length(); i++) {
                 String command = commands.getString(i);
-                
+
+                if (isBlockedCommand(command)) {
+                    JSONObject blocked = new JSONObject();
+                    blocked.put("command", command);
+                    blocked.put("success", false);
+                    blocked.put("output", "This command is not allowed via the API.");
+                    results.put(blocked);
+                    continue;
+                }
+
                 final BetterCommandExecutor.CommandResult[] result = new BetterCommandExecutor.CommandResult[1];
                 
                 BukkitTask task = Bukkit.getScheduler().runTask(MinecraftServerAPI.getInstance(), () -> {
@@ -388,8 +431,8 @@ public final class ServerAPI {
             
         } catch (Exception e) {
             Logger.error("Error executing multiple commands: " + e.getMessage());
-            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.INTERNAL_ERROR, 
-                "application/json", "{\"error\":\"" + e.getMessage() + "\"}");
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.INTERNAL_ERROR,
+                "application/json", "{\"error\":\"An internal error occurred while executing commands.\"}");
         }
     }
 

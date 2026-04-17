@@ -10,11 +10,26 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public final class BackupAPI {
+    private static final Set<Long> backupThreadIds = ConcurrentHashMap.newKeySet();
+
+    private static boolean isValidBackupName(final String name) {
+        return name.matches("[a-zA-Z0-9._-]+");
+    }
+
+    private static boolean isPathSafe(final File file, final File parentDir) {
+        try {
+            return file.getCanonicalPath().startsWith(parentDir.getCanonicalPath());
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     public static List<String> filesToBackup = List.of(
         "world",
         "world_nether",
@@ -69,12 +84,19 @@ public final class BackupAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Name is required\"}");
         }
 
+        if (!isValidBackupName(name)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Invalid backup name. Only alphanumeric characters, dots, hyphens, and underscores are allowed.\"}");
+        }
+
         File backupFolder = new File("backups");
         if (!backupFolder.exists()) {
             backupFolder.mkdirs();
         }
 
         File backupFile = new File(backupFolder, name + ".loading.zip");
+        if (!isPathSafe(backupFile, backupFolder)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.FORBIDDEN, "application/json", "{\"error\": \"Invalid backup name.\"}");
+        }
         if (backupFile.exists()) {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Backup with that name already exists\"}");
         }
@@ -94,7 +116,6 @@ public final class BackupAPI {
         // Exclude the backups folder from being included in the backup
         filesToBackupList.remove(backupFolder.getAbsolutePath());
 
-        // Create a new thread to create the backup
         Thread backupThread = new Thread(() -> {
             try (FileOutputStream fos = new FileOutputStream(backupFile);
                  ZipOutputStream zos = new ZipOutputStream(fos)) {
@@ -106,7 +127,6 @@ public final class BackupAPI {
                     }
                 }
 
-                // Rename file to remove .loading
                 File finalBackupFile = new File(backupFolder, name + ".zip");
                 if (!(backupFile.renameTo(finalBackupFile))) {
                     Logger.error("Failed to rename backup file: " + backupFile.getName());
@@ -116,9 +136,12 @@ public final class BackupAPI {
 
             } catch (IOException e) {
                 Logger.error("Error creating backup: " + e.getMessage());
+            } finally {
+                backupThreadIds.remove(Thread.currentThread().getId());
             }
         });
         backupThread.setName("BackupThread-" + name + "-" + backupThread.getId());
+        backupThreadIds.add(backupThread.getId());
 
         backupThread.start();
 
@@ -168,8 +191,15 @@ public final class BackupAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Name is required\"}");
         }
 
+        if (!isValidBackupName(name)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Invalid backup name.\"}");
+        }
+
         File backupFolder = new File("backups");
         File backupFile = new File(backupFolder, name + ".zip");
+        if (!isPathSafe(backupFile, backupFolder)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.FORBIDDEN, "application/json", "{\"error\": \"Invalid backup name.\"}");
+        }
         if (!backupFile.exists()) {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "application/json", "{\"error\": \"Backup not found\"}");
         }
@@ -182,10 +212,20 @@ public final class BackupAPI {
     }
 
     public NanoHTTPD.Response getStatus(final Map<String, String> params) {
-        int threadId = Integer.parseInt(params.get("threadId"));
-
-        if (threadId == 0) {
+        String threadIdStr = params.get("threadId");
+        if (threadIdStr == null) {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Thread ID is required\"}");
+        }
+
+        long threadId;
+        try {
+            threadId = Long.parseLong(threadIdStr);
+        } catch (NumberFormatException e) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Invalid thread ID.\"}");
+        }
+
+        if (!backupThreadIds.contains(threadId)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "application/json", "{\"error\": \"Backup thread not found\"}");
         }
 
         Thread thread = Thread.getAllStackTraces().keySet().stream()
@@ -214,8 +254,15 @@ public final class BackupAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Name is required\"}");
         }
 
+        if (!isValidBackupName(name)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Invalid backup name.\"}");
+        }
+
         File backupFolder = new File("backups");
         File backupFile = new File(backupFolder, name + ".zip");
+        if (!isPathSafe(backupFile, backupFolder)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.FORBIDDEN, "application/json", "{\"error\": \"Invalid backup name.\"}");
+        }
         if (!backupFile.exists()) {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "application/json", "{\"error\": \"Backup not found\"}");
         }
@@ -270,8 +317,15 @@ public final class BackupAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Name is required\"}");
         }
 
+        if (!isValidBackupName(name)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\": \"Invalid backup name.\"}");
+        }
+
         File backupFolder = new File("backups");
         File backupFile = new File(backupFolder, name + ".zip");
+        if (!isPathSafe(backupFile, backupFolder)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.FORBIDDEN, "application/json", "{\"error\": \"Invalid backup name.\"}");
+        }
         if (!backupFile.exists()) {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "application/json", "{\"error\": \"Backup not found\"}");
         }

@@ -2,13 +2,16 @@ package com.shweit.serverapi.handlers;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
 public final class LogHandler extends Handler {
-    private final List<HashMap<String, String>> log = new ArrayList<>();
+    private static final int MAX_LOG_ENTRIES = 1000;
+    private final Deque<HashMap<String, String>> log = new ConcurrentLinkedDeque<>();
 
     @Override
     public void publish(final LogRecord record) {
@@ -18,7 +21,10 @@ public final class LogHandler extends Handler {
 
         String readableTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(record.getMillis());
         logRecord.put("time", readableTime);
-        log.add(logRecord);
+        log.addLast(logRecord);
+        while (log.size() > MAX_LOG_ENTRIES) {
+            log.pollFirst();
+        }
     }
 
     @Override
@@ -32,6 +38,6 @@ public final class LogHandler extends Handler {
     }
 
     public List<HashMap<String, String>> getLog() {
-        return log;
+        return new ArrayList<>(log);
     }
 }

@@ -10,7 +10,7 @@ swagger: true
 # It is not recommended to disable this. If you do, everyone can access the API.
 authentication:
   enabled: true
-  key: "TestKey"
+  key: "${MCAPI_TEST_KEY}"
 
 # If you want to enable the debug mode, set this to true.
 # This will print more information to the console.

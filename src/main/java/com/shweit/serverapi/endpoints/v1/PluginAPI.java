@@ -9,10 +9,12 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.util.Map;
+import java.util.Set;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -20,6 +22,24 @@ import java.nio.file.StandardCopyOption;
 import static com.shweit.serverapi.utils.Helper.deleteDirectory;
 
 public final class PluginAPI {
+    private static final Set<String> ALLOWED_SCHEMES = Set.of("http", "https");
+
+    private static boolean isUnsafeUrl(final String urlString) {
+        try {
+            URL url = new URL(urlString);
+            if (!ALLOWED_SCHEMES.contains(url.getProtocol().toLowerCase())) {
+                return true;
+            }
+            InetAddress address = InetAddress.getByName(url.getHost());
+            return address.isLoopbackAddress()
+                || address.isSiteLocalAddress()
+                || address.isLinkLocalAddress()
+                || address.isAnyLocalAddress();
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
     public NanoHTTPD.Response getPlugins(final Map<String, String> ignoredParams) {
         Plugin[] plugins = Bukkit.getPluginManager().getPlugins();
 
@@ -63,37 +83,49 @@ public final class PluginAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Missing plugin URL.\"}");
         }
 
+        if (isUnsafeUrl(pluginUrl)) {
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.FORBIDDEN, "application/json",
+                "{\"error\":\"Only HTTP/HTTPS URLs to public addresses are allowed.\"}");
+        }
+
         try {
-            // Set up connection to the URL
             URL url = new URL(pluginUrl);
             URLConnection connection = url.openConnection();
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(30000);
             connection.connect();
 
-            // Get input stream from the connection
-            InputStream inputStream = new BufferedInputStream(url.openStream());
+            InputStream inputStream = new BufferedInputStream(connection.getInputStream());
 
-            // Determine the filename from the URL
-            String fileName = pluginUrl.substring(pluginUrl.lastIndexOf('/') + 1);
+            String rawFileName = pluginUrl.substring(pluginUrl.lastIndexOf('/') + 1);
+            String fileName = rawFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            if (!fileName.toLowerCase().endsWith(".jar")) {
+                inputStream.close();
+                return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json",
+                    "{\"error\":\"Only .jar files are allowed.\"}");
+            }
 
-            // Path to the plugins directory (adjust path as needed)
             File pluginDir = new File("plugins");
-
-            // Path to save the plugin file
             File pluginFile = new File(pluginDir, fileName);
+
+            if (!pluginFile.getCanonicalPath().startsWith(pluginDir.getCanonicalPath())) {
+                inputStream.close();
+                return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.FORBIDDEN, "application/json",
+                    "{\"error\":\"Invalid file path.\"}");
+            }
+
             FileOutputStream outputStream = new FileOutputStream(pluginFile);
 
-            // Buffer for data and downloading
             byte[] buffer = new byte[1024];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 outputStream.write(buffer, 0, bytesRead);
             }
 
-            // Close streams
             outputStream.close();
             inputStream.close();
 
-            if (params.get("reload").equals("true")) {
+            if ("true".equals(params.get("reload"))) {
                 final long delay = 20L;
                 new BukkitRunnable() {
                     @Override
@@ -103,11 +135,10 @@ public final class PluginAPI {
                 }.runTaskLater(MinecraftServerAPI.getInstance(), delay);
             }
 
-            // Return a success response
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", "{}");
         } catch (Exception e) {
             Logger.error(e.getMessage());
-            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.INTERNAL_ERROR, "application/json", "{}");
+            return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.INTERNAL_ERROR, "application/json", "{\"error\":\"Failed to download plugin.\"}");
         }
     }
 
@@ -145,7 +176,7 @@ public final class PluginAPI {
             }
 
 
-            if (params.get("reload").equals("true")) {
+            if ("true".equals(params.get("reload"))) {
                 final long delay = 20L;
                 new BukkitRunnable() {
                     @Override

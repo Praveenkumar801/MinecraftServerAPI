@@ -5,6 +5,8 @@ import com.shweit.serverapi.utils.RouteDefinition;
 import fi.iki.elonen.NanoHTTPD;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,8 +18,8 @@ public final class WebServer extends NanoHTTPD {
     private final String authKey;
     private final List<RouteDefinition> routes = new ArrayList<>();
 
-    public WebServer(final int port, final boolean authenticationEnabled, final String authenticationKey) {
-        super(port);
+    public WebServer(final int port, final String hostname, final boolean authenticationEnabled, final String authenticationKey) {
+        super(hostname, port);
         this.isAuthenticated = authenticationEnabled;
         this.authKey = authenticationKey;
     }
@@ -101,22 +103,63 @@ public final class WebServer extends NanoHTTPD {
     // Method to handle authentication
     private Response handleAuthentication(final IHTTPSession session, final String uri) {
         String authHeader = session.getHeaders().get("authorization");
-        if (authHeader == null || !authHeader.equals(authKey)) {
+        if (authHeader == null || !timeSafeEquals(authHeader, authKey)) {
             Logger.debug("Unauthorized request for: " + uri);
             return newFixedLengthResponse(Response.Status.UNAUTHORIZED, MIME_PLAINTEXT, "Unauthorized");
         }
         return null;
     }
 
+    private static boolean timeSafeEquals(final String a, final String b) {
+        byte[] aBytes = a.getBytes(StandardCharsets.UTF_8);
+        byte[] bBytes = b.getBytes(StandardCharsets.UTF_8);
+        return MessageDigest.isEqual(aBytes, bBytes);
+    }
+
     // Method to check if a path is allowed without authentication
     private boolean isAllowedPath(final String uri, final boolean swaggerDocumentation) {
-        List<String> allowedPaths = swaggerDocumentation ? List.of(
+        if (!swaggerDocumentation) {
+            return false;
+        }
+
+        List<String> allowedPaths = List.of(
                 "/", "/swagger-ui-bundle.js", "/swagger-ui.css", "/api-docs", "/index.css",
                 "/searchPlugin.js", "/swagger-ui-standalone-preset.js", "/swagger-initializer.js",
                 "/favicon-32x32.png", "/swagger-ui.css.map", "/favicon-16x16.png"
-        ) : List.of();
+        );
 
-        return allowedPaths.stream().anyMatch(path -> uri.equals(path) || uri.startsWith("/swagger"));
+        String normalizedUri = normalizePath(uri);
+        return allowedPaths.contains(normalizedUri);
+    }
+
+    private static String normalizePath(final String uri) {
+        String decoded = uri;
+        try {
+            decoded = java.net.URLDecoder.decode(uri, StandardCharsets.UTF_8);
+        } catch (Exception ignored) { }
+
+        String[] parts = decoded.split("/");
+        List<String> segments = new ArrayList<>();
+        for (String part : parts) {
+            if (part.isEmpty() || ".".equals(part)) {
+                continue;
+            }
+            if ("..".equals(part)) {
+                if (!segments.isEmpty()) {
+                    segments.remove(segments.size() - 1);
+                }
+            } else {
+                segments.add(part);
+            }
+        }
+        if (segments.isEmpty()) {
+            return "/";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String seg : segments) {
+            sb.append("/").append(seg);
+        }
+        return sb.toString();
     }
 
     // Method to extract query parameters

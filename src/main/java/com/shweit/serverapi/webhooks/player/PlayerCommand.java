@@ -29,10 +29,6 @@ public final class PlayerCommand implements WebHook, Listener {
          jsonObject.put("command", event.getMessage());
          jsonObject.put("location", event.getPlayer().getLocation().toString());
 
-         if (event.getPlayer().getAddress() != null) {
-             jsonObject.put("ip", event.getPlayer().getAddress().getAddress().getHostAddress());
-         }
-
          String message = "Player " + event.getPlayer().getName() + " executed command: " + event.getMessage();
          jsonObject.put("message", message);
 

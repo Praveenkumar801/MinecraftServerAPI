@@ -22,6 +22,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import com.shweit.serverapi.listeners.PlayerLoginListener;
 
 import java.io.File;
+import java.util.Set;
 
 public class MinecraftServerAPI extends JavaPlugin  {
 
@@ -49,16 +50,19 @@ public class MinecraftServerAPI extends JavaPlugin  {
         boolean authEnabled = getConfig().getBoolean("authentication.enabled", true);
         String authKey = getConfig().getString("authentication.key", "CHANGE_ME");
 
+        Set<String> rejectedKeys = Set.of("CHANGE_ME", "TestKey", "test", "admin", "password");
+
         if (!authEnabled) {
             Logger.warning("Authentication is disabled. This is not recommended.");
-        } else if ("CHANGE_ME".equals(authKey)) {
-            Logger.error("Please change the authKey in the config.yml file.");
+        } else if (rejectedKeys.contains(authKey)) {
+            Logger.error("Please change the authKey in the config.yml file. Well-known default keys are rejected.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         int port = getConfig().getInt("port", DEFAULT_PORT);
-        server = new WebServer(port, authEnabled, authKey);
+        String bindAddress = getConfig().getString("bind-address", "127.0.0.1");
+        server = new WebServer(port, bindAddress, authEnabled, authKey);
 
         new RegisterEndpoints(server).registerEndpoints();
 

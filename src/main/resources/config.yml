@@ -3,8 +3,13 @@
 # The port the API should listen on.
 port: 7000
 
-# Enable swagger documentation for the API endpoints
-swagger: true
+# The address the API should bind to. Default is 127.0.0.1 (localhost only).
+# Set to 0.0.0.0 to listen on all interfaces (NOT recommended without a reverse proxy with TLS).
+bind-address: "127.0.0.1"
+
+# Enable swagger documentation for the API endpoints.
+# WARNING: Swagger UI is served without authentication. Disable in production.
+swagger: false
 
 # If you want to enable Authentication, set this to true.
 # It is not recommended to disable this. If you do, everyone can access the API.
