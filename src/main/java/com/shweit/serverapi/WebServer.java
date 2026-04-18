@@ -8,24 +8,40 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 public final class WebServer extends NanoHTTPD {
     private final boolean isAuthenticated;
     private final String authKey;
+    private final boolean ipWhitelistEnabled;
+    private final Set<String> whitelistedIps;
     private final List<RouteDefinition> routes = new ArrayList<>();
 
-    public WebServer(final int port, final String hostname, final boolean authenticationEnabled, final String authenticationKey) {
+    public WebServer(final int port, final String hostname, final boolean authenticationEnabled, final String authenticationKey,
+                     final boolean ipWhitelistEnabled, final List<String> whitelistedIps) {
         super(hostname, port);
         this.isAuthenticated = authenticationEnabled;
         this.authKey = authenticationKey;
+        this.ipWhitelistEnabled = ipWhitelistEnabled;
+        this.whitelistedIps = Collections.unmodifiableSet(new HashSet<>(whitelistedIps));
     }
 
     @Override
     public Response serve(final IHTTPSession session) {
+        if (ipWhitelistEnabled) {
+            String clientIp = session.getRemoteIpAddress();
+            if (!whitelistedIps.contains(clientIp)) {
+                Logger.debug("Blocked request from non-whitelisted IP: " + clientIp);
+                return newFixedLengthResponse(Response.Status.FORBIDDEN, MIME_PLAINTEXT, "Forbidden");
+            }
+        }
+
         String uri = session.getUri();
         NanoHTTPD.Method method = session.getMethod();
         Map<String, String> params = new HashMap<>();

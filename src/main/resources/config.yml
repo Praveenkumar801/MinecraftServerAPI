@@ -17,6 +17,16 @@ authentication:
   enabled: true
   key: "CHANGE_ME"
 
+# IP Whitelist - Only allow requests from specific IP addresses.
+# When enabled, any request from a non-whitelisted IP will be rejected with 403 Forbidden.
+ip-whitelist:
+  enabled: false
+  allowed-ips:
+    - "127.0.0.1"
+    - "::1"
+    # Add more IPs here:
+    # - "192.168.1.100"
+
 # If you want to enable the debug mode, set this to true.
 # This will print more information to the console.
 debug: false

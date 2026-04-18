@@ -22,6 +22,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import com.shweit.serverapi.listeners.PlayerLoginListener;
 
 import java.io.File;
+import java.util.List;
 import java.util.Set;
 
 public class MinecraftServerAPI extends JavaPlugin  {
@@ -62,7 +63,19 @@ public class MinecraftServerAPI extends JavaPlugin  {
 
         int port = getConfig().getInt("port", DEFAULT_PORT);
         String bindAddress = getConfig().getString("bind-address", "127.0.0.1");
-        server = new WebServer(port, bindAddress, authEnabled, authKey);
+
+        boolean ipWhitelistEnabled = getConfig().getBoolean("ip-whitelist.enabled", false);
+        List<String> whitelistedIps = getConfig().getStringList("ip-whitelist.allowed-ips");
+
+        if (ipWhitelistEnabled) {
+            if (whitelistedIps.isEmpty()) {
+                Logger.warning("IP whitelist is enabled but no IPs are configured. All requests will be blocked.");
+            } else {
+                Logger.info("IP whitelist enabled. Allowed IPs: " + whitelistedIps);
+            }
+        }
+
+        server = new WebServer(port, bindAddress, authEnabled, authKey, ipWhitelistEnabled, whitelistedIps);
 
         new RegisterEndpoints(server).registerEndpoints();
 
