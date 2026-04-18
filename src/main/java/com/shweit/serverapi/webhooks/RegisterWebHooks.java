@@ -30,14 +30,20 @@ import java.util.concurrent.CompletableFuture;
 
 public final class RegisterWebHooks {
     private static List<String> urls;
+    private static String webhookSecret;
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
     public void registerWebHooks() {
 
         urls = MinecraftServerAPI.config.getStringList("webhooks.urls");
+        webhookSecret = MinecraftServerAPI.config.getString("webhooks.secret", "");
 
         if (urls.isEmpty()) {
             Logger.warning("No WebHook URL's found in config.yml");
+        }
+
+        if (webhookSecret.isEmpty()) {
+            Logger.debug("No webhook secret configured. Outgoing webhooks will not include an auth header.");
         }
 
         // Register all webhooks
@@ -189,7 +195,10 @@ public final class RegisterWebHooks {
                 requestBuilder.uri(uri);
             }
             
-            // Check if only message should be sent
+            if (webhookSecret != null && !webhookSecret.isEmpty()) {
+                requestBuilder.header("X-Webhook-Secret", webhookSecret);
+            }
+
             boolean onlyMessage = MinecraftServerAPI.config.getBoolean("webhooks.onlyMessage", false);
             String bodyContent;
             
@@ -229,6 +238,6 @@ public final class RegisterWebHooks {
     public static boolean doActivateWebhook(final String eventName) {
         String eventPath = "webhooks." + eventName;
 
-        return MinecraftServerAPI.config.getBoolean(eventPath, true);
+        return MinecraftServerAPI.config.getBoolean(eventPath, false);
     }
 }
