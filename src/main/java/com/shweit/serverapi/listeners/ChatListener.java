@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+@SuppressWarnings("deprecation") // AsyncPlayerChatEvent has no Spigot replacement; Paper-only AsyncChatEvent is not usable here
 public final class ChatListener implements Listener {
     private static final int MAX_MESSAGES = 1000;
     private final Deque<HashMap<String, String>> messages = new ConcurrentLinkedDeque<>();

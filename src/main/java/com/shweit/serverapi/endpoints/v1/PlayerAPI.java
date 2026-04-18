@@ -7,8 +7,10 @@ import fi.iki.elonen.NanoHTTPD;
 import org.bukkit.*;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.advancement.AdvancementProgress;
+import org.bukkit.ban.ProfileBanList;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.meta.Damageable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -135,7 +137,7 @@ public final class PlayerAPI {
             }
         }
 
-        for (Material material : Material.values()) {
+        for (Material material : Registry.MATERIAL) {
             try {
                 if (material.isBlock()) {
                     stats.put("MINE_BLOCK_" + material.name(), offlinePlayer.getStatistic(Statistic.MINE_BLOCK, material));
@@ -148,7 +150,7 @@ public final class PlayerAPI {
             }
         }
 
-        for (EntityType entityType : EntityType.values()) {
+        for (EntityType entityType : Registry.ENTITY_TYPE) {
             try {
                 stats.put("KILL_ENTITY_" + entityType.name(), offlinePlayer.getStatistic(Statistic.KILL_ENTITY, entityType));
                 stats.put("ENTITY_KILLED_BY_" + entityType.name(), offlinePlayer.getStatistic(Statistic.ENTITY_KILLED_BY, entityType));
@@ -230,20 +232,19 @@ public final class PlayerAPI {
             }
 
             JSONObject itemJson = new JSONObject();
-            itemJson.put("type", player.getInventory().getItem(i).getType().name());
-            itemJson.put("amount", player.getInventory().getItem(i).getAmount());
-            itemJson.put("durability", player.getInventory().getItem(i).getDurability());
-            itemJson.put("displayName", player.getInventory().getItem(i).getItemMeta().getDisplayName());
-            itemJson.put("lore", player.getInventory().getItem(i).getItemMeta().getLore());
-            itemJson.put("enchantments", player.getInventory().getItem(i).getEnchantments());
-            itemJson.put("attributes", player.getInventory().getItem(i).getItemMeta().getAttributeModifiers());
-            itemJson.put("flags", player.getInventory().getItem(i).getItemMeta().getItemFlags());
-            itemJson.put("unbreakable", player.getInventory().getItem(i).getItemMeta().isUnbreakable());
-            if (player.getInventory().getItem(i).getItemMeta().hasCustomModelData()) {
-                itemJson.put("customModelData", player.getInventory().getItem(i).getItemMeta().getCustomModelData());
+            var item = player.getInventory().getItem(i);
+            itemJson.put("type", item.getType().name());
+            itemJson.put("amount", item.getAmount());
+            if (item.getItemMeta() instanceof Damageable damageable) {
+                itemJson.put("damage", damageable.getDamage());
             }
-            itemJson.put("itemFlags", player.getInventory().getItem(i).getItemMeta().getItemFlags());
-            itemJson.put("itemMeta", player.getInventory().getItem(i).getItemMeta());
+            itemJson.put("displayName", item.getItemMeta().getDisplayName());
+            itemJson.put("lore", item.getItemMeta().getLore());
+            itemJson.put("enchantments", item.getEnchantments());
+            itemJson.put("attributes", item.getItemMeta().getAttributeModifiers());
+            itemJson.put("flags", item.getItemMeta().getItemFlags());
+            itemJson.put("unbreakable", item.getItemMeta().isUnbreakable());
+            itemJson.put("itemFlags", item.getItemMeta().getItemFlags());
             inventoryJson.put(String.valueOf(i), itemJson);
         }
 
@@ -277,7 +278,6 @@ public final class PlayerAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "application/json", "{}");
         }
 
-        // Spieler muss online sein, um Inventar abrufen zu können
         Player player = offlinePlayer.getPlayer();
         if (player == null || !player.isOnline()) {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "application/json", "{}");
@@ -287,21 +287,20 @@ public final class PlayerAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "application/json", "{}");
         }
 
+        var item = player.getInventory().getItem(i);
         JSONObject itemJson = new JSONObject();
-        itemJson.put("type", player.getInventory().getItem(i).getType().name());
-        itemJson.put("amount", player.getInventory().getItem(i).getAmount());
-        itemJson.put("durability", player.getInventory().getItem(i).getDurability());
-        itemJson.put("displayName", player.getInventory().getItem(i).getItemMeta().getDisplayName());
-        itemJson.put("lore", player.getInventory().getItem(i).getItemMeta().getLore());
-        itemJson.put("enchantments", player.getInventory().getItem(i).getEnchantments());
-        itemJson.put("attributes", player.getInventory().getItem(i).getItemMeta().getAttributeModifiers());
-        itemJson.put("flags", player.getInventory().getItem(i).getItemMeta().getItemFlags());
-        itemJson.put("unbreakable", player.getInventory().getItem(i).getItemMeta().isUnbreakable());
-        if (player.getInventory().getItem(i).getItemMeta().hasCustomModelData()) {
-            itemJson.put("customModelData", player.getInventory().getItem(i).getItemMeta().getCustomModelData());
+        itemJson.put("type", item.getType().name());
+        itemJson.put("amount", item.getAmount());
+        if (item.getItemMeta() instanceof Damageable damageable) {
+            itemJson.put("damage", damageable.getDamage());
         }
-        itemJson.put("itemFlags", player.getInventory().getItem(i).getItemMeta().getItemFlags());
-        itemJson.put("itemMeta", player.getInventory().getItem(i).getItemMeta());
+        itemJson.put("displayName", item.getItemMeta().getDisplayName());
+        itemJson.put("lore", item.getItemMeta().getLore());
+        itemJson.put("enchantments", item.getEnchantments());
+        itemJson.put("attributes", item.getItemMeta().getAttributeModifiers());
+        itemJson.put("flags", item.getItemMeta().getItemFlags());
+        itemJson.put("unbreakable", item.getItemMeta().isUnbreakable());
+        itemJson.put("itemFlags", item.getItemMeta().getItemFlags());
 
         return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", itemJson.toString());
     }
@@ -375,7 +374,8 @@ public final class PlayerAPI {
 
         if (offlinePlayer.isBanned()) {
             Bukkit.getScheduler().runTask(MinecraftServerAPI.getInstance(), () -> {
-                Bukkit.getBanList(BanList.Type.NAME).pardon(offlinePlayer.getName());
+                ProfileBanList banList = Bukkit.getBanList(BanList.Type.PROFILE);
+                banList.pardon(offlinePlayer.getPlayerProfile());
             });
         }
 

@@ -78,7 +78,6 @@ public final class ServerAPI {
         serverInfo.put("viewDistance", Bukkit.getServer().getViewDistance());
         serverInfo.put("simulationDistance", Bukkit.getServer().getSimulationDistance());
         serverInfo.put("spawnRadius", Bukkit.getServer().getSpawnRadius());
-        serverInfo.put("worldType", Bukkit.getServer().getWorldType());
 
         JSONObject plugins = new JSONObject();
         for (Plugin key : Bukkit.getServer().getPluginManager().getPlugins()) {
@@ -325,7 +324,8 @@ public final class ServerAPI {
             return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.BAD_REQUEST, "application/json", "{\"error\":\"Invalid Message.\"}");
         }
 
-        Bukkit.broadcastMessage(message);
+        @SuppressWarnings("deprecation")
+        int ignored = Bukkit.broadcastMessage(message);
 
         return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json", "{}");
     }

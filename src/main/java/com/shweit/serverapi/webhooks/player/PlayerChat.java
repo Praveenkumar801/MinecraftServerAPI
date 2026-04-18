@@ -9,6 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.json.JSONObject;
 
+@SuppressWarnings("deprecation") // AsyncPlayerChatEvent has no Spigot replacement; Paper-only AsyncChatEvent is not usable here
 public final class PlayerChat implements WebHook, Listener {
 
     private final String eventName = WebHookEnum.PLAYER_CHAT.label;
