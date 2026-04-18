@@ -21,7 +21,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import com.shweit.serverapi.listeners.PlayerLoginListener;
 
-import java.io.File;
 import java.util.List;
 import java.util.Set;
 
@@ -103,10 +102,7 @@ public class MinecraftServerAPI extends JavaPlugin  {
     }
 
     private void createConfig() {
-        File configFile = new File(getDataFolder(), "config.yml");
-        if (!configFile.exists())  {
-            saveResource("config.yml", false);
-        }
+        saveDefaultConfig();
     }
 
     public static MinecraftServerAPI getInstance() {
