@@ -29,11 +29,18 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public final class RegisterWebHooks {
+    private static boolean globalEnabled;
     private static List<String> urls;
     private static String webhookSecret;
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
     public void registerWebHooks() {
+        globalEnabled = MinecraftServerAPI.config.getBoolean("webhooks.enabled", false);
+
+        if (!globalEnabled) {
+            Logger.info("Webhooks are globally disabled.");
+            return;
+        }
 
         urls = MinecraftServerAPI.config.getStringList("webhooks.urls");
         webhookSecret = MinecraftServerAPI.config.getString("webhooks.secret", "");
@@ -46,7 +53,6 @@ public final class RegisterWebHooks {
             Logger.debug("No webhook secret configured. Outgoing webhooks will not include an auth header.");
         }
 
-        // Register all webhooks
         new ServerStart().register();
         Logger.debug("Registered server_start WebHook");
 
@@ -160,8 +166,11 @@ public final class RegisterWebHooks {
     }
 
     public static void sendToAllUrls(final JSONObject jsonObject) {
+        if (!globalEnabled) {
+            return;
+        }
+
         if (urls == null || urls.isEmpty()) {
-            Logger.warning("Keine WebHook-URLs in der config.yml gefunden");
             return;
         }
 

@@ -9,6 +9,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginEnableEvent;
 import org.json.JSONObject;
 
+import java.util.List;
+
 public final class PluginEnable implements WebHook, Listener {
 
     private final String eventName = WebHookEnum.PLUGIN_ENABLE.label;
@@ -27,7 +29,8 @@ public final class PluginEnable implements WebHook, Listener {
         jsonObject.put("event", eventName);
         jsonObject.put("plugin_name", event.getPlugin().getName());
         jsonObject.put("plugin_version", event.getPlugin().getDescription().getVersion());
-        jsonObject.put("plugin_author", event.getPlugin().getDescription().getAuthors().get(0));
+        List<String> authors = event.getPlugin().getDescription().getAuthors();
+        jsonObject.put("plugin_author", authors.isEmpty() ? "Unknown" : authors.get(0));
         jsonObject.put("plugin_description", event.getPlugin().getDescription().getDescription());
 
         String message = "Plugin '" + event.getPlugin().getName() + "' v" + 

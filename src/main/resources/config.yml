@@ -35,6 +35,10 @@ debug: false
 # All webhooks are disabled by default. Enable only the ones you need.
 webhooks:
 
+  # Global toggle - set to true to enable the webhook system.
+  # When false, no webhooks will be registered or sent regardless of individual settings below.
+  enabled: false
+
   # You can set a list of URLs which should be called when the Webhook is triggered.
   # You can set multiple URLs here.
   urls:
